@@ -3,34 +3,35 @@
 
 # CC-RB-LF-SCH-DASHBOARD
 
-<!-- badges: start -->
-<!-- badges: end -->
+[![contributions
+welcome](https://img.shields.io/badge/contributions-welcome-brightgreen.svg?style=flat)](https://github.com/dwyl/esta/issues)
 
-The goal of CC-RB-LF-SCH-DASHBOARD is to …
+The goal of CC-RB-LF-SCH-DASHBOARD repository is to run the data
+pipeline necessary to create the CC-RB-LF-SCH Dashboard.
 
-What is special about using `README.Rmd` instead of just `README.md`?
-You can include R chunks like so:
+## Data Sources
 
-``` r
-summary(cars)
-#>      speed           dist       
-#>  Min.   : 4.0   Min.   :  2.00  
-#>  1st Qu.:12.0   1st Qu.: 26.00  
-#>  Median :15.0   Median : 36.00  
-#>  Mean   :15.4   Mean   : 42.98  
-#>  3rd Qu.:19.0   3rd Qu.: 56.00  
-#>  Max.   :25.0   Max.   :120.00
-```
+list all data sources here in bullet format. I think best to include
+file name and short description then you can share the path to each file
+in an email/DM. We will link to all data sources with `keys` and **never
+put data into the repo**
 
-You’ll still need to render `README.Rmd` regularly, to keep `README.md`
-up-to-date. `devtools::build_readme()` is handy for this. You could also
-use GitHub Actions to re-render `README.Rmd` every time you push. An
-example workflow can be found here:
-<https://github.com/r-lib/actions/tree/v1/examples>.
+1.  *fill here*
+2.  *etc.*
 
-You can also embed plots, for example:
+## Structure
 
-![](README_files/figure-gfm/pressure-1.png)<!-- -->
+The repository is based around an R project (`.rproj`). The structure
+will closely follow R package design protocol, but will not be built
+into a package at this stage. We avoid creating a `package-project` as
+we will want to minimize complications when/if we deploy a `{targets}`
+workflow.
 
-In that case, don’t forget to commit and push the resulting figure
-files, so they display on GitHub.
+-   **R** - contains pure functions
+-   **scripts** - scripts/exploratory work done in `.R` files
+-   **rmds** - work done in `.Rmd` files.
+-   **note** - it might make sense to `usethis::use_vignette()` rather
+    than `rmds`as typical for package development. We can assess this
+    later on.
+-   **tests** - automatically created by `usethis::use_testthat()` for
+    storing tests.
