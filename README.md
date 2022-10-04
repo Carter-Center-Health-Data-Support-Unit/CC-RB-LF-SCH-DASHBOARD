@@ -7,7 +7,7 @@
 welcome](https://img.shields.io/badge/contributions-welcome-brightgreen.svg?style=flat)](https://github.com/dwyl/esta/issues)
 
 The goal of CC-RB-LF-SCH-DASHBOARD repository is to run the data
-pipeline necessary to create the CC-RB-LF-SCH Dashboard.
+pipeline necessary to prepare the data for the CC-RB-LF-SCH Dashboard.
 
 ## Data Sources
 

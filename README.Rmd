@@ -15,7 +15,7 @@ knitr::opts_chunk$set(
 
 [![contributions welcome](https://img.shields.io/badge/contributions-welcome-brightgreen.svg?style=flat)](https://github.com/dwyl/esta/issues)
 
-The goal of CC-RB-LF-SCH-DASHBOARD repository is to run the data pipeline necessary to create the CC-RB-LF-SCH Dashboard.
+The goal of CC-RB-LF-SCH-DASHBOARD repository is to run the data pipeline necessary to prepare the data for the CC-RB-LF-SCH Dashboard.
 
 ## Data Sources
 
@@ -33,8 +33,3 @@ The repository is based around an R project (`.rproj`). The structure will close
 - **rmds** - work done in `.Rmd` files.
 - **note** - it might make sense to `usethis::use_vignette()` rather than `rmds`as typical for package development. We can assess this later on. 
 - **tests** - automatically created by `usethis::use_testthat()` for storing tests.
-
-
-
-
-
