@@ -1,0 +1,19 @@
+---
+title: "proces recommendations"
+format: html
+editor: visual
+---
+
+## Intro
+
+This document outlines process recommendations for the `RB-LF-SCHI` monthly data pipelines from data collection to analysis. Recommendations are meant to make to increase the efficiency, integrity, transparency, and utility of the whole process.
+
+### General Recommendations
+
+1.  **Data Collection:** using data collection software would improve integrity of data. The possibility of data collection software (mobile or computer) depends on the data collection framework/logistics - so we need additional information. However, checks could be put in place to make sure data is coherent and appropriately filled. In many cases it seems feasibly that data could be input into XLSForm by one or two regional staff.
+2.  **Data Storage:** All raw data should be put into a folder labelled `raw_data` and file name with the following syntax: `YYMM_CountryCode_ProjCode_daterecieved`. Where `YYMMM` is the year-month combination of the round. These raw files should never be manipulated. Manipulated or cleaned files should be stored elsewhere to preserve record (see next point)
+3.  **Data Cleaning:** Ideally data cleaning should be done via code (i.e R, Python, SQL). Manual cleaning can be done on copies if necessary, but in this case a cleaning log should be produced which specifies all changes made to the raw data set. Clean data should be stored in a folder called `raw_data`
+4.  **Data Processing**: TBD
+5.  **Data Cleaning**: TBD
+
+## Project Specific
