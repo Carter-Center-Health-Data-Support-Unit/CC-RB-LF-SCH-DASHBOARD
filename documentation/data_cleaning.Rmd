@@ -1,0 +1,161 @@
+---
+title: "cleaning_raw_data_catalogue"
+author: "Zack Arno"
+date: '2022-10-07'
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r libraries}
+library(tidyverse)
+# source custom functions in R  folder
+invisible(purrr::map(dir("R/",full.names = T),~source(.x,verbose = FALSE,echo = F)))
+```
+
+
+## Intro
+
+The purpose of this notebook is to document the data cleaning process. Here we outline several cleaning steps:
+
+1. Compile the raw data catalog
+2. Clean raw data to make clean data catalogue
+  a. Read/extract/compile "relevant" tables from raw data
+  b. Harmonize administrative names to master list
+  c. Select relevant/critical variables from each table
+
+## Compile the raw data catalogue
+
+This step has been completed. The functions to do this are in the `R/` folder. I will either add the code documentation here or create a separate notbook for this process (*TODO*).
+
+## Name Harmonization
+
+Perhaps the most cumbersome step of the cleaning will be to harmonize all the administrative names used during data collection to a master list. I recommend using the administrative boundaries files endorsed by OCHA which can be downloaded [here](https://data.humdata.org/dataset/cod-ab-eth).
+
+This step requires feedback from other team members and should be considered the **main initial data cleaning priority**. Therefore, I have set up a pipeline and created some tools to facilitate the cleaning of names.
+
+First we have some convenience functions to compile the data sets and extract admin names. Note you will need to create an `system environment variable` that holds the entire path to the directory  `Country Monthly Reports` directory of the onedrive. Once this environment is stored you can run the following chunk to load all the "RB_rx" tabs. By harmonizing all the names in this tab, we will essentially be creating a admin name dictionary/lookup table that can be used to reclassify admin names in other tabs.
+
+
+```{r}
+root_dir <- Sys.getenv("CC_RB_LF_SCH_MONTHLY")
+data_dir <- glue::glue("{root_dir}/ETH/data_raw/")
+
+dataset_list <- compile_tab(folder_path = data_dir,which_tabs = "RB_rx")
+```
+
+Next we will load and compile all the admin columns from the raw data catalog This is done with the `load_admins_from_raw` function. **Note:** The final data pipeline will likely change, but these steps are used to create our administrative name harmonization database/lookup.
+
+
+
+```{r}
+# load admin columns
+admins_raw <- new_format_datasets |>
+  purrr::map_dfr(~load_admins_from_raw(.x))
+
+# load ocha endoresed admin boundaries 
+master_adm<- read_rds("data/eth_adm_master")
+```
+
+We want to sanitize admin names (i.e tolower case, trimws, remove characters/symbols), but first we need to fix a data entry/quality issue. When there was just one `admin 3` being reported in a specific `admin 2` the staff entering the data often wrote `1` into `admin 3` and in the `admin 2` column they wrote the `admin 2 - admin 3`. Therefore we will fix that here - we can turn this into a function later - for now just run this chunk
+
+
+```{r}
+# before sanitzing lets set adm 3 properly (when admin 2/3 sometimes combined in adm2)
+admins_c1 <- admins_raw |> 
+  separate(col = adm2_name,into = c("adm2_rev","adm3_rev"),sep = "-") |> 
+  mutate(adm3_f= if_else(!is.na(adm3_rev),adm3_rev, adm3_name)) |> 
+  filter(!adm3_f %in% as.character(c(1:1000))) |> 
+  select(adm1_name, adm2_name = adm2_rev, adm3_name= adm3_f)
+```
+
+### Fix Admin 1
+
+1. sanitize admin 1
+2. check admin1 against master 
+3. fix admin 1
+4. check fixed admin 1 against master (repeat steps 3 & 4 until clean)
+```{r}
+# step 1 - preliminary clean of admin 1
+admins_c1_san<- admins_c1 |> 
+  sanitize_admins()
+
+check_admin1(df = admins_c1,df_master = master_adm)
+
+
+# with these changes it should be fixed.
+cleaned_adm1_a <- admins_c1_san |> 
+  mutate(
+    adm1_name = case_when(
+      adm1_name == "ben_gumuz"~"benishangul_gumz",
+      adm1_name == "gambella"~"gambela" ,
+      adm1_name == "snnpr"~"snnp",
+      adm1_name == "swe"~"south_west_ethiopia",
+      TRUE~ adm1_name
+    )
+  )
+    
+    
+check_admin1(df = cleaned_adm1_a,df_master = master_adm)
+```
+
+### Fix Admin 2
+
+This follows the same procedure as above, but instead you can use the `check_admin2()` function.
+
+three types of data entry errors have been noted:
+
+1. incorrect/misspelled admin 2
+2. incorrect/misspelled admin 1
+3. incorrect/misspelled admin 1 & 2 
+
+I frequently pull up the master list and sort by admin 2 to find the correct reclassification values. 
+```{r}
+check_admin2(cleaned_adm1_a,df_master = master_adm)
+
+cleaned_adm2_a <- cleaned_adm1_a |> 
+  mutate(
+    # TYPE 2: INCORRECT ADMIN 1 - FIX ADMIN 1
+    adm1_name= case_when(
+      adm1_name == "snnp" & adm2_name %in%c("kaffa","kefa")~"south_west_ethiopia", 
+      adm1_name == "snnp" & adm2_name %in%c("dawuro")~"south_west_ethiopia", 
+      adm1_name == "snnp" & adm2_name %in%c("bench_sheko","sheka")~"south_west_ethiopia", 
+      TRUE~adm1_name
+    ),
+    # TYPE 1:  INCORRECT ADMIN 2 - FIX ADMIN 2
+     adm2_name = case_when(
+      adm2_name == "illubabor"~"ilu_aba_bora" ,
+      adm2_name == "agnuwa"~"agnewak" ,
+      adm2_name == "west_gojjam"~"west_gojam" ,
+      adm1_name == "south_west_ethiopia" & adm2_name == "kaffa"~"kefa" ,
+      adm1_name == "oromia" & adm2_name == "north_shoa"~"north_shewa_or" ,
+      adm1_name == "amhara" & adm2_name == "north_shoa"~"north_shewa_am" ,
+      adm1_name == "oromia" & adm2_name == "sw_shoa"~"south_west_shewa" ,
+      adm1_name == "gambela" & adm2_name == "mezheng"~"majang" ,
+      adm1_name == "amhara" & adm2_name == "south_wollo"~"south_wello" ,
+      adm1_name == "gambela" & adm2_name == "itang_sp_w"~"itang_special_woreda" ,
+      adm1_name == "oromia" & adm2_name == "e_arsi"~"arsi" ,
+      adm1_name %in%c("snnp", "snnpr") & adm2_name =="kaffa"~"kefa",
+      TRUE ~ adm2_name
+    )
+    
+  ) 
+
+
+master_adm |>
+  distinct(adm1_en,adm2_en) |>
+  arrange(
+    adm2_en
+    )  
+   
+check_admin2(cleaned_adm1_a,df_master = master_adm)  
+
+```
+
+
+```{r}
+
+
+```
