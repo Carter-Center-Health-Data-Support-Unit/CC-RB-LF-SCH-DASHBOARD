@@ -139,7 +139,7 @@ check_admin2<- function(df, df_master){
     cat(crayon::green("All admin 1 in raw data are in master list"))
   }
   if(nrow(problem_freq)>0){
-    cat(crayon::red("Below is a freq table of adm1_names used in raw data that are not in master\n"))
+    cat(crayon::red("Below is a freq table of adm1_name + adm2_name used in raw data that are not in master\n"))
     problem_freq
   }
 
