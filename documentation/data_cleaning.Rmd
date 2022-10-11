@@ -15,7 +15,6 @@ library(tidyverse)
 invisible(purrr::map(dir("R/",full.names = T),~source(.x,verbose = FALSE,echo = F)))
 ```
 
-
 ## Intro
 
 The purpose of this notebook is to document the data cleaning process. Here we outline several cleaning steps:
@@ -39,7 +38,7 @@ This step requires feedback from other team members and should be considered the
 First we have some convenience functions to compile the data sets and extract admin names. Note you will need to create an `system environment variable` that holds the entire path to the directory  `Country Monthly Reports` directory of the onedrive. Once this environment is stored you can run the following chunk to load all the "RB_rx" tabs. By harmonizing all the names in this tab, we will essentially be creating a admin name dictionary/lookup table that can be used to reclassify admin names in other tabs.
 
 
-```{r}
+```{r load_data}
 root_dir <- Sys.getenv("CC_RB_LF_SCH_MONTHLY")
 data_dir <- glue::glue("{root_dir}/ETH/data_raw/")
 
@@ -50,7 +49,7 @@ Next we will load and compile all the admin columns from the raw data catalog Th
 
 
 
-```{r}
+```{r load_admins}
 # load admin columns
 admins_raw <- new_format_datasets |>
   purrr::map_dfr(~load_admins_from_raw(.x))
@@ -62,7 +61,7 @@ master_adm<- read_rds("data/eth_adm_master")
 We want to sanitize admin names (i.e tolower case, trimws, remove characters/symbols), but first we need to fix a data entry/quality issue. When there was just one `admin 3` being reported in a specific `admin 2` the staff entering the data often wrote `1` into `admin 3` and in the `admin 2` column they wrote the `admin 2 - admin 3`. Therefore we will fix that here - we can turn this into a function later - for now just run this chunk
 
 
-```{r}
+```{r fix_entry_error1}
 # before sanitzing lets set adm 3 properly (when admin 2/3 sometimes combined in adm2)
 admins_c1 <- admins_raw |> 
   separate(col = adm2_name,into = c("adm2_rev","adm3_rev"),sep = "-") |> 
@@ -77,7 +76,7 @@ admins_c1 <- admins_raw |>
 2. check admin1 against master 
 3. fix admin 1
 4. check fixed admin 1 against master (repeat steps 3 & 4 until clean)
-```{r}
+```{r fix_admin1}
 # step 1 - preliminary clean of admin 1
 admins_c1_san<- admins_c1 |> 
   sanitize_admins()
@@ -112,7 +111,7 @@ three types of data entry errors have been noted:
 3. incorrect/misspelled admin 1 & 2 
 
 I frequently pull up the master list and sort by admin 2 to find the correct reclassification values. 
-```{r}
+```{r fix_admin2}
 check_admin2(cleaned_adm1_a,df_master = master_adm)
 
 cleaned_adm2_a <- cleaned_adm1_a |> 
