@@ -123,7 +123,8 @@ cleaned_adm2_a <- cleaned_adm1_a |>
     adm1_name= case_when(
       adm1_name == "snnp" & adm2_name %in%c("kaffa","kefa")~"south_west_ethiopia", 
       adm1_name == "snnp" & adm2_name %in%c("dawuro")~"south_west_ethiopia", 
-      adm1_name == "snnp" & adm2_name %in%c("bench_sheko","sheka")~"south_west_ethiopia", 
+      adm1_name == "snnp" & adm2_name %in%c("bench_sheko","sheka")~"south_west_ethiopia",
+      adm1_name == "south_west_ethiopia" & adm2_name %in%c("west_omo", "om_b_149_o") ~ "snnp",
       TRUE~adm1_name
     ),
     # TYPE 1:  INCORRECT ADMIN 2 - FIX ADMIN 2
@@ -140,6 +141,14 @@ cleaned_adm2_a <- cleaned_adm1_a |>
       adm1_name == "gambela" & adm2_name == "itang_sp_w"~"itang_special_woreda" ,
       adm1_name == "oromia" & adm2_name == "e_arsi"~"arsi" ,
       adm1_name %in%c("snnp", "snnpr") & adm2_name =="kaffa"~"kefa",
+      adm1_name == "benishangul_gumz" & adm2_name == "dam_workers_metekel"~"metekel" ,
+      adm1_name == "gambela" & adm2_name == "refugees_7_camps"~"refugees" ,
+      adm1_name == "gambela" & adm2_name == "refugees_7_vamps"~"refugees" ,
+      adm1_name == "gambela" & adm2_name == "refugees_gambella"~"refugees" ,
+      adm1_name == "snnp" & adm2_name == "bench_maji"~"bench_sheko" ,
+      adm2_name == "gamogofa" ~ "gofa",
+      adm2_name == "west_omo" ~ "mirab_omo",
+      adm2_name == "west_om_b_149_o" ~ "mirab_omo",
       TRUE ~ adm2_name
     )
     
@@ -147,9 +156,9 @@ cleaned_adm2_a <- cleaned_adm1_a |>
 
 
 master_adm |>
-  distinct(adm1_en,adm2_en) |>
+  distinct(adm1_en,adm2_en, adm3_en) |>
   arrange(
-    adm2_en
+    adm3_en
     )  
    
 check_admin2(cleaned_adm2_a,df_master = master_adm)  
