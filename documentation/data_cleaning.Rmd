@@ -11,8 +11,11 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ```{r libraries}
 library(tidyverse)
+library(usethis)
+library(here)
+library(janitor)
 # source custom functions in R  folder
-invisible(purrr::map(dir("R/",full.names = T),~source(.x,verbose = FALSE,echo = F)))
+invisible(purrr::map(dir(here("R/"),full.names = T),~source(.x,verbose = FALSE,echo = F)))
 ```
 
 ## Intro
@@ -51,11 +54,11 @@ Next we will load and compile all the admin columns from the raw data catalog Th
 
 ```{r load_admins}
 # load admin columns
-admins_raw <- new_format_datasets |>
+admins_raw <- dataset_list |>
   purrr::map_dfr(~load_admins_from_raw(.x))
 
 # load ocha endoresed admin boundaries 
-master_adm<- read_rds("data/eth_adm_master")
+master_adm<- read_rds(here("data/eth_adm_master"))
 ```
 
 We want to sanitize admin names (i.e tolower case, trimws, remove characters/symbols), but first we need to fix a data entry/quality issue. When there was just one `admin 3` being reported in a specific `admin 2` the staff entering the data often wrote `1` into `admin 3` and in the `admin 2` column they wrote the `admin 2 - admin 3`. Therefore we will fix that here - we can turn this into a function later - for now just run this chunk
@@ -90,7 +93,7 @@ cleaned_adm1_a <- admins_c1_san |>
     adm1_name = case_when(
       adm1_name == "ben_gumuz"~"benishangul_gumz",
       adm1_name == "gambella"~"gambela" ,
-      adm1_name == "snnpr"~"snnp",
+      adm1_name == "snnpr"~"snnp", #snnp used to match HDX file
       adm1_name == "swe"~"south_west_ethiopia",
       TRUE~ adm1_name
     )
@@ -149,7 +152,7 @@ master_adm |>
     adm2_en
     )  
    
-check_admin2(cleaned_adm1_a,df_master = master_adm)  
+check_admin2(cleaned_adm2_a,df_master = master_adm)  
 
 ```
 
