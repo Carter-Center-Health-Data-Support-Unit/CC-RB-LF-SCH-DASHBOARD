@@ -166,7 +166,8 @@ check_admin2(cleaned_adm2_a,df_master = master_adm)
 ```
 
 
-# lets fix admin 3
+# Fix admin 3
+
 ```{r}
 ## this will be handy for maually comparing to master
 master_adm_adj <-  master_adm |>
