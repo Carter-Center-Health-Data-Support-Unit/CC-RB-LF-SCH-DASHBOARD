@@ -168,30 +168,31 @@ check_admin2(cleaned_adm2_a,df_master = master_adm)
 
 # lets fix admin 3
 ```{r}
-
-master_adm_adj <- master_adm |> 
-  sanitize_admins() |> 
-  mutate(
-    adm_1_2_3=  glue::glue("{adm1_en}-{adm2_en}-{adm3_en}")
-  )
+## this will be handy for maually comparing to master
+master_adm_adj <-  master_adm |>
+    sanitize_admins() |>
+    mutate(
+      adm_1_2_3=  glue::glue("{adm1_en}-{adm2_en}-{adm3_en}")
+    )
 
 cleaned_adm3_a <- cleaned_adm2_a |> 
   mutate(
-      adm_1_2_3=  glue::glue("{adm1_name}-{adm2_name}-{adm3_name}"),
-
-    # scenario 1 adm1 mixed up - uncomment and fill if necessary
+    # lets separate admins with "-" to avoid confusion
+    adm_1_2_3=  glue::glue("{adm1_name}-{adm2_name}-{adm3_name}"),
+    
+    # SCENARIO 1: adm1 mixed up - uncomment and fill if necessary
     # adm1_name= case_when()
-      
-    # scenario 2 - adm2 mixed upp
+    
+    # SCENARIO 2: adm2 mixed upp
     adm2_name = case_when(
       adm_1_2_3=="amhara-central_gondar-quara"~ "west_gondar",
       TRUE~ adm2_name
-      ),
+    ),
     
-    # scenario 3 - adm3 wrong
+    # SCENARIO 3 adm3 wrong
     adm3_name = case_when(
       adm_1_2_3=="amhara-south_gondar-e_estie"~ "east_esite",
-      adm_1_2_3=="amhara-south_gondar-w_estie_andabet"~ "andabet_west_esite",
+      adm_1_2_3 %in% c("amhara-south_gondar-w_estie_andabet","amhara-south_gondar-w_estie")~ "andabet_west_esite",
       adm_1_2_3=="amhara-west_gojam-s_achefer"~ "debub_achefer",
       adm_1_2_3=="amhara-west_gojam-n_achefer"~ "semen_achefer",
       adm_1_2_3=="gambela-agnewak-dimma"~ "dima_gm",
@@ -201,31 +202,40 @@ cleaned_adm3_a <- cleaned_adm2_a |>
       adm_1_2_3=="gambela-agnewak-gambella_town"~ "gambela_town",
       adm_1_2_3=="gambela-agnewak-gambella_zuria"~ "gambela_zuria",
       # adm_1_2_3=="gambela-agnewak-gambella"~  ##### not sure about this one could be `gambela_town`?
-      # adm_1_2_3=="gambela-agnewak-gambella"~  deder_town
+      adm_1_2_3=="south_west_ethiopia-dawuro-terch_town"~  "tercha_town",
+      adm_1_2_3=="south_west_ethiopia-dawuro-tarcha_zuria"~  "tercha_zuriya",
+      adm_1_2_3=="south_west_ethiopia-kefa-goba"~  "goba_sp",
+      
       
       TRUE~ adm3_name
-      )
-
+    )
+    
   )
+
 check_admin3(df = cleaned_adm3_a,df_master = master_adm)
+
+
 master_adm_adj |> 
   as_tibble() |> 
   arrange(adm3_en) |>
   print(n=2000) |> 
   filter(
+    ### you can filter the concatenated 1_2_3
+    str_detect(adm_1_2_3,"gira"),
     
     
-    # you can filter the concatenated 1_2_3
-    # str_detect(adm_1_2_3,"chew"),
+    ### if that doesn't work comment it out and
+    ### try some pattern matching on other admins
+    ###**hint:** "^" = starts with
+    ###**        "$" = ends with
+   
+    # str_detect(adm3_en, "ded")
+    # str_detect(adm2_en,"north_shewa_am")
     
-    
-    # if that doesn't work comment it out and
-    # try some pattern matching on other admins
-    #**hint:** "^" = starts with
-    #**        "$" = ends with 
-    
-    str_detect(adm3_en, "ded")
-    )  
+    )  |> 
+  print(n=1000)
+
+
 
  ```
 
