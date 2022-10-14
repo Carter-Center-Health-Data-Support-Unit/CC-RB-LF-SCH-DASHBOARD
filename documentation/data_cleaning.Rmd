@@ -221,9 +221,21 @@ cleaned_adm3_a <- cleaned_adm2_a |>
       adm3_name == "didesa" ~ "dedesa",
       adm3_name == "deder_rural" ~ "deder",
       adm3_name == "gursum" ~ "gursum_(or)",
-      adm2_name == "east_hararghe" & adm3_name == "jarso" ~ "jarso_(east_hararghe)",
-      adm2_name == "east_hararghe" & adm3_name == "kersa" ~ "kersa_(east_hararghe)",
-      
+      adm2_name == "east_hararge" & adm3_name == "jarso" ~ "jarso_(east_hararghe)", #this one has a second h in harargHe
+      adm2_name == "east_hararge" & adm3_name == "kersa" ~ "kersa_(east_hararge)", #no second H in hararge
+      adm3_name == "melka_belo" ~ "melka_balo",
+      adm3_name == "meyumulke" ~ "meyu_muleke",
+      adm3_name == "algie_sachi" ~ "alge_sachi",
+      adm2_name == "ilu_aba_bora" & adm3_name == "becho" ~ "becho_(ilu_aba_bora)",
+      adm3_name == "bure" ~ "bure_(or)",
+      adm3_name == "halu" ~ "halu /huka",
+      adm3_name == "hurrumu" ~ "hurumu",
+      adm3_name == "mettu" ~ "metu_zuria",
+      adm3_name == "mettu_town" ~ "metu_town",
+      adm3_name == "agaro" ~ "agaro_town",
+      adm2_name == "jimma" & adm3_name == "chora_botor" ~ "chora_(jimma)",
+      adm3_name == "gomma" ~ "goma",
+      adm3_name == "gumey" ~ "gumay",
       TRUE~ adm3_name
     )
     
