@@ -151,11 +151,11 @@ cleaned_adm2_a <- cleaned_adm1_a |>
       adm2_name == "bench_maji" ~ "bench_sheko",
       adm3_name == "gezie_gofa" ~ "gofa",
       adm3_name == "melokoza" ~ "gofa",
-      adm3_name == "meneat_goldia" ~ "mirab_omo",
-      adm3_name == "meneat_shasha" ~ "mirab_omo",
-      adm3_name == "maji" ~ "mirab_omo",
-      adm3_name == "surma" ~ "mirab_omo",
-      adm3_name == "bero" ~ "mirab_omo",
+      adm3_name == "meneat_goldia" ~ "mirab_omo", #why is this not changing all adm3 == "meneat_goldia" to have adm2 == "mirab_omo"
+      adm3_name == "meneat_shasha" ~ "mirab_omo", #same thing
+      adm3_name == "maji" ~ "mirab_omo", #sane thing
+      adm3_name == "surma" ~ "mirab_omo", #same thing
+      adm3_name == "bero" ~ "mirab_omo", #same thing
       
       TRUE ~ adm2_name
     )
@@ -166,6 +166,8 @@ cleaned_adm2_a <- cleaned_adm1_a |>
 master_adm |>
   distinct(adm1_en,adm2_en, adm3_en) |>
   arrange(
+    adm1_en,
+    adm2_en,
     adm3_en
     )  
    
@@ -284,16 +286,17 @@ cleaned_adm3_a <- cleaned_adm2_a |>
       adm3_name == "yeki_woreda" ~ "yeki",
       adm3_name == "masha_woreda" ~ "masha",
       adm3_name == "mizan_aman" ~ "mizan_aman_town",
+      adm3_name == "semen_ari" ~ "north_ari",
+      adm2_name == "metekel" & is.na(adm3_name) ~ "dam_workers",
+      
       TRUE~ adm3_name
     )
     
   )
 
 check_admin3(df = cleaned_adm3_a,df_master = master_adm)
-```
 
 
-```{r}
 master_adm_adj |> 
   as_tibble() |> 
   arrange(adm3_en) |>
