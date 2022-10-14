@@ -158,7 +158,9 @@ cleaned_adm2_a <- cleaned_adm1_a |>
 master_adm |>
   distinct(adm1_en,adm2_en, adm3_en) |>
   arrange(
-    adm2_en
+    adm1_en,
+    adm2_en,
+    adm3_en
     )  
    
 check_admin2(cleaned_adm2_a,df_master = master_adm)  
@@ -206,7 +208,21 @@ cleaned_adm3_a <- cleaned_adm2_a |>
       adm_1_2_3=="south_west_ethiopia-dawuro-terch_town"~  "tercha_town",
       adm_1_2_3=="south_west_ethiopia-dawuro-tarcha_zuria"~  "tercha_zuriya",
       adm_1_2_3=="south_west_ethiopia-kefa-goba"~  "goba_sp",
-      
+      adm2_name == "refugees" ~ "refugees",
+      adm2_name == "itang_special_woreda" ~ "itang",
+      adm3_name == "wombera" ~ "wembera",
+      adm3_name == "simada" ~ "semada",
+      adm3_name == "dibatie" ~ "dibate",
+      adm3_name == "gambella" ~ "gambela_zuria",
+      adm3_name == "mengeshi" ~ "mengesh",
+      adm3_name == "digaluna_tijo" ~ "degeluna_tijo",
+      adm3_name == "chora" ~ "chora_(buno_bedele)",
+      adm3_name == "chewaka" ~ "chwaka",
+      adm3_name == "didesa" ~ "dedesa",
+      adm3_name == "deder_rural" ~ "deder",
+      adm3_name == "gursum" ~ "gursum_(or)",
+      adm2_name == "east_hararghe" & adm3_name == "jarso" ~ "jarso_(east_hararghe)",
+      adm2_name == "east_hararghe" & adm3_name == "kersa" ~ "kersa_(east_hararghe)",
       
       TRUE~ adm3_name
     )
@@ -235,13 +251,6 @@ master_adm_adj |>
     
     )  |> 
   print(n=1000)
-
-
-
- ```
-
-
-```{r}
 
 
 ```
