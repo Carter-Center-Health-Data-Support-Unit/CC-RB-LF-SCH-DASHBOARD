@@ -136,7 +136,7 @@ check_admin2<- function(df, df_master){
     count(adm_1_2)
 
   if(nrow(problem_freq)==0){
-    cat(crayon::green("All admin 1 in raw data are in master list"))
+    cat(crayon::green("All admin 2 in raw data are in master list"))
   }
   if(nrow(problem_freq)>0){
     cat(crayon::red("Below is a freq table of adm1_name + adm2_name used in raw data that are not in master\n"))
@@ -144,6 +144,38 @@ check_admin2<- function(df, df_master){
   }
 
 }
+
+
+check_admin3 <-  function(df,df_master){
+  df_adm_san <-df |>
+    sanitize_admins() |>
+    mutate(
+      adm_1_2_3=  glue::glue("{adm1_name}-{adm2_name}-{adm3_name}")
+    )
+  df_master_adm_clean <-  df_master |>
+    sanitize_admins() |>
+    mutate(
+      adm_1_2_3=  glue::glue("{adm1_en}-{adm2_en}-{adm3_en}")
+    )
+  problem_freq <- df_adm_san |>
+    filter(!adm_1_2_3 %in% df_master_adm_clean$adm_1_2_3) |>
+    count(adm_1_2_3)
+
+  num_issues <- nrow(problem_freq)
+  if(num_issues==0){
+    cat(crayon::green("All admin 1 in raw data are in master list"))
+  }
+  if(num_issues>0){
+    cat(crayon::red("Below is a freq table of adm1_name + adm2_name + adm3_name used in raw data that are not in master\n"))
+    problem_freq |>
+      as_tibble() |>
+      print(n=num_issues)
+  }
+
+
+}
+
+
 
 
 sanitize_admins <-  function(df){
