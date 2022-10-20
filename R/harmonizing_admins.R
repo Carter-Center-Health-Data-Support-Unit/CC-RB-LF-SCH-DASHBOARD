@@ -178,9 +178,3 @@ check_admin3 <-  function(df,df_master){
 
 
 
-sanitize_admins <-  function(df){
-  df |>
-    mutate(
-      across(.cols = matches("adm\\d"),~clean_vec_names(.x))
-    )
-}
