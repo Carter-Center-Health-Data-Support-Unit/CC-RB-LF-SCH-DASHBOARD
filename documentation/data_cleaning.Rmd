@@ -198,6 +198,8 @@ cleaned_adm3_a <- cleaned_adm2_a |>
       TRUE~ adm2_name
     ),
     
+    adm_1_2_3=  glue::glue("{adm1_name}-{adm2_name}-{adm3_name}"),
+    
     # SCENARIO 3 adm3 wrong
     adm3_name = case_when(
       adm_1_2_3=="amhara-south_gondar-e_estie"~ "east_esite",
