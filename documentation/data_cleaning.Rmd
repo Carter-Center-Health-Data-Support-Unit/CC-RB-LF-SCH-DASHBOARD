@@ -149,6 +149,7 @@ cleaned_adm2_a <- cleaned_adm1_a |>
       adm2_name == "west_omo" ~ "mirab_omo",
       adm2_name == "west_om_b_149_o" ~ "mirab_omo",
       adm2_name == "bench_maji" ~ "bench_sheko",
+
       TRUE ~ adm2_name
     )
     
@@ -158,7 +159,7 @@ cleaned_adm2_a <- cleaned_adm1_a |>
 master_adm |>
   distinct(adm1_en,adm2_en, adm3_en) |>
   arrange(
-    adm2_en
+    adm3_en
     )  
    
 check_admin2(cleaned_adm2_a,df_master = master_adm)  
@@ -187,8 +188,17 @@ cleaned_adm3_a <- cleaned_adm2_a |>
     # SCENARIO 2: adm2 mixed upp
     adm2_name = case_when(
       adm_1_2_3=="amhara-central_gondar-quara"~ "west_gondar",
+      adm_1_2_3 == "snnp-gamo-gezie_gofa" ~ "gofa",
+      adm_1_2_3 == "snnp-gamo-melokoza" ~ "gofa",
+      adm_1_2_3 == "south_west_ethiopia-bench_sheko-meneat_shasha" ~ "mirab_omo",
+      adm_1_2_3 == "south_west_ethiopia-bench_sheko-meneat_goldia" ~ "mirab_omo",
+      adm_1_2_3 == "south_west_ethiopia-bench_sheko-maji" ~ "mirab_omo",
+      adm_1_2_3 == "south_west_ethiopia-bench_sheko-bero" ~ "mirab_omo",
+      adm_1_2_3 == "south_west_ethiopia-bench_sheko-surma" ~ "mirab_omo",
       TRUE~ adm2_name
     ),
+    
+    adm_1_2_3=  glue::glue("{adm1_name}-{adm2_name}-{adm3_name}"),
     
     # SCENARIO 3 adm3 wrong
     adm3_name = case_when(
@@ -202,11 +212,83 @@ cleaned_adm3_a <- cleaned_adm2_a |>
       adm_1_2_3=="oromia-buno_bedele-bedele_t"~ "bedele_town",
       adm_1_2_3=="gambela-agnewak-gambella_town"~ "gambela_town",
       adm_1_2_3=="gambela-agnewak-gambella_zuria"~ "gambela_zuria",
-      # adm_1_2_3=="gambela-agnewak-gambella"~  ##### not sure about this one could be `gambela_town`?
+      adm_1_2_3 == "amhara-south_gondar-simada" ~ "semada",
+      adm_1_2_3 == "benishangul_gumz-metekel-dibatie" ~ "dibate",
+      adm_1_2_3 == "benishangul_gumz-metekel-NA" ~ "dam_workers",
+      adm_1_2_3 == "benishangul_gumz-metekel-0" ~ "dam_workers",
+      adm_1_2_3 == "benishangul_gumz-metekel-wombera" ~ "wembera",
+      adm_1_2_3 == "gambela-agnewak-gambella" ~ "gambela_zuria",
+      adm_1_2_3 == "gambela-itang_special_woreda-itang_sp_w" ~"itang",
+      adm_1_2_3 == "gambela-majang-mengeshi" ~ "mengesh",
+      adm_1_2_3 == "gambela-refugees-0" ~ "refugees",
+      adm_1_2_3 == "gambela-refugees-NA" ~ "refugees",
+      adm_1_2_3 == "oromia-arsi-digaluna_tijo" ~ "degeluna_tijo",
       adm_1_2_3=="south_west_ethiopia-dawuro-terch_town"~  "tercha_town",
       adm_1_2_3=="south_west_ethiopia-dawuro-tarcha_zuria"~  "tercha_zuriya",
       adm_1_2_3=="south_west_ethiopia-kefa-goba"~  "goba_sp",
-      
+      adm_1_2_3== "oromia-buno_bedele-chewaka" ~ "chwaka",
+      adm_1_2_3== "oromia-buno_bedele-chora" ~ "chora_(buno_bedele)",
+      adm_1_2_3 == "oromia-buno_bedele-didesa" ~ "dedesa",
+      adm_1_2_3 == "oromia-east_hararge-deder_rural" ~ "deder", 
+      adm_1_2_3 == "oromia-east_hararge-gursum" ~ "gursum_(or)",
+      adm_1_2_3 == "oromia-east_hararge-jarso" ~ "jarso_(east_hararghe)",
+      adm_1_2_3 == "oromia-east_hararge-kersa" ~ "kersa_(east_hararge)",
+      adm_1_2_3 == "oromia-east_hararge-melka_belo" ~ "melka_balo",
+      adm_1_2_3 == "oromia-east_hararge-meyumulke" ~ "meyu_muleke",
+      adm_1_2_3 == "oromia-ilu_aba_bora-algie_sachi" ~ "alge_sachi",
+      adm_1_2_3 == "oromia-ilu_aba_bora-becho" ~ "becho_(ilu_aba_bora)",
+      adm_1_2_3 == "oromia-ilu_aba_bora-bure" ~ "bure_(or)",
+      adm_1_2_3 == "oromia-ilu_aba_bora-halu" ~ "halu /huka",
+      adm_1_2_3 == "oromia-ilu_aba_bora-hurrumu" ~ "hurumu",
+      adm_1_2_3 == "oromia-ilu_aba_bora-mettu" ~ "metu_zuria",
+      adm_1_2_3 == "oromia-ilu_aba_bora-mettu_town" ~ "metu_town",
+      adm_1_2_3 == "oromia-ilu_aba_bora-yayo" ~ "yayu",
+      adm_1_2_3 == "oromia-jimma-agaro" ~ "agaro_town",
+      adm_1_2_3 == "oromia-jimma-chora_botor" ~ "chora_(jimma)",
+      adm_1_2_3 == "oromia-jimma-gomma" ~ "goma",
+      adm_1_2_3 == "oromia-jimma-gumey" ~ "gumay",
+      adm_1_2_3 == "oromia-jimma-kersa" ~ "kersa_(jimma)",
+      adm_1_2_3 == "oromia-jimma-limu_saka" ~ "limu_seka",
+      adm_1_2_3 == "oromia-jimma-mana" ~ "mena_(jimma)",
+      adm_1_2_3 == "oromia-jimma-mencho" ~ "mancho",
+      adm_1_2_3 == "oromia-jimma-shebe_sembo" ~ "shebe_sambo",
+      adm_1_2_3 == "oromia-jimma-sokoru" ~ "sekoru",
+      adm_1_2_3 == "oromia-north_shewa_or-girar_jarso" ~ "gerar_jarso",
+      adm_1_2_3 == "oromia-north_shewa_or-hidhabu_abote" ~ "hidabu_abote",
+      adm_1_2_3 == "oromia-west_hararge-chiro_rural" ~ "chiro_zuria",
+      adm_1_2_3 == "oromia-west_hararge-guba_qoricha" ~ "goba_koricha",
+      adm_1_2_3 == "oromia-west_hararge-oda_bultum" ~ "kuni_/oda_bultum",
+      adm_1_2_3 == "oromia-west_hararge-tulo" ~ "tulo_(or)",
+      adm_1_2_3 == "snnp-gofa-gezie_gofa" ~ "gezei_gofa",
+      adm_1_2_3 == "snnp-gofa-melokoza" ~ "melekoza",
+      adm_1_2_3 == "oromia-west_hararge-burka_dimtu" ~ "burqua_dhintu",
+      adm_1_2_3 == "snnp-south_omo-selamago" ~ "salamago",
+      adm_1_2_3 == "snnp-south_omo-selamego" ~ "salamago",
+      adm_1_2_3 == "snnp-south_omo-semen_ari" ~ "north_ari",
+      adm_1_2_3 == "south_west_ethiopia-bench_sheko-gide_bench" ~ "gidi_bench",
+      adm_1_2_3 == "south_west_ethiopia-bench_sheko-guraferda" ~ "gurafereda",
+      adm_1_2_3 == "south_west_ethiopia-bench_sheko-mizan_aman" ~ "mizan_aman_town",
+      adm_1_2_3 == "south_west_ethiopia-bench_sheko-shie_bench" ~ "shay_bench",
+      adm_1_2_3 == "south_west_ethiopia-bench_sheko-siz_town" ~ "size_town",
+      adm_1_2_3 == "south_west_ethiopia-dawuro-esera" ~ "isara",
+      adm_1_2_3 == "south_west_ethiopia-dawuro-essera" ~ "isara",
+      adm_1_2_3 == "south_west_ethiopia-dawuro-gena_bossa" ~ "gena",
+      adm_1_2_3 == "south_west_ethiopia-dawuro-kechi" ~ "kachi",
+      adm_1_2_3 == "south_west_ethiopia-dawuro-mermanisa" ~ "mari_mansa",
+      adm_1_2_3 == "south_west_ethiopia-dawuro-tercha_city" ~ "tercha_town",
+      adm_1_2_3 == "south_west_ethiopia-dawuro-zaba_gazo" ~ "zabagazo",
+      adm_1_2_3 == "south_west_ethiopia-kefa-adiyo" ~ "adiyio",
+      adm_1_2_3 == "south_west_ethiopia-kefa-bitta" ~ "bita",
+      adm_1_2_3 == "south_west_ethiopia-kefa-bonga" ~ "bonga_town",
+      adm_1_2_3 == "south_west_ethiopia-kefa-shishoende" ~ "shisho_ande",
+      adm_1_2_3 == "south_west_ethiopia-kefa-tello" ~ "tullo",
+      adm_1_2_3 == "south_west_ethiopia-mirab_omo-gorigesha" ~ "gori_gesha",
+      adm_1_2_3 == "south_west_ethiopia-mirab_omo-meneat_goldia" ~ "menit_goldiye",
+      adm_1_2_3 == "south_west_ethiopia-mirab_omo-meneat_shasha" ~ "menit_shasha",
+      adm_1_2_3 == "south_west_ethiopia-sheka-andracha" ~ "anderacha",
+      adm_1_2_3 == "south_west_ethiopia-sheka-masha_woreda" ~ "masha",
+      adm_1_2_3 == "south_west_ethiopia-sheka-teppi_town" ~ "tepi",
+      adm_1_2_3 == "south_west_ethiopia-sheka-yeki_woreda" ~ "yeki",
       
       TRUE~ adm3_name
     )
@@ -235,13 +317,6 @@ master_adm_adj |>
     
     )  |> 
   print(n=1000)
-
-
-
- ```
-
-
-```{r}
 
 
 ```
