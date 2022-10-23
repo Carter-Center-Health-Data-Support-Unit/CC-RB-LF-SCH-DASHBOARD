@@ -360,6 +360,7 @@ column_name_freq_table
 ```
 
 
+### Inputs needed
 To clear up this issue set the parameters below
 ```{r}
 # choose the column name to go with for total pop from here on out-- by default i chose the one which showed more records
