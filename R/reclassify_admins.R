@@ -320,6 +320,25 @@ clean_names_and_admins <-  function(df){
     sanitize_admins() |>
     clean_adm1() |>
     clean_adm2() |>
-    clean_adm3()
+    clean_adm3() |>
+    remove_empty_artefact_cols()
 
 }
+
+
+remove_empty_artefact_cols <-  function(df){
+  df_p_artefacts <-  df |>
+    parse_top_table() |>
+    select(matches("^x\\d*"))
+
+  df_x_cols_rm <- df |>
+    select(-matches("^x\\d*"))
+
+  mask_keep <- colSums(!is.na(df_p_artefacts)) > 0
+  df_p_artefacts_m <- df_p_artefacts[, mask_keep, drop = FALSE]
+  if(nrow(df_p_artefacts_m)>0){
+    cbind(df_x_cols_rm,df_p_artefacts_m)
+  }
+
+}
+

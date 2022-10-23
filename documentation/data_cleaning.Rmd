@@ -324,7 +324,7 @@ master_adm_adj |>
 ```
 
 
-## Extracting relevant data
+## Select relevant/critical variables
 
 The above steps have been combined into generic functions (in the R directory). A satisfactory amount of names have been cleaned and it is time to move onto the next phase where we start to compile the data.
 
@@ -342,27 +342,53 @@ cleaned_phase1 <- dataset_list |>
       clean_names_and_admins()
   }
 )
+```
+
+Now we need to figure out which columns are important to keep for the compiled data set. Let's make a frequency table of columns names.
+
+When you print the table below you can see that the column names look pretty clean. For almost all columns there are 37 entries (i.e the column was present in all data sets). `x28` and `x8` are most likely junk that can be disregarded. The only columns that do not show up in all 37 data sets are `total_popn_census` & `total_popn_projected`. However there frequencies combined add up to 36 which is suspiciously close to 37. It's likely that there was a column name switch at some point
 
 
-
-### let's check out column names
-
-col_count <- perty_clean |> 
+```{r}
+column_name_freq_table <- cleaned_phase1 |> 
   purrr::map_dfr(
-    ~ {
-       data.frame(col_names= colnames(.x))  
-    }
-     
+    ~data.frame(col_names= colnames(.x))  
   ) |> 
   count(col_names)
 
-perty_clean |> 
-  purrr::map(
-    ~ {
-       # data.frame(col_names= colnames(.x))  
-      all(c("total_popn_census" ,"total_popn_projected") %in% colnames(.x))
-    }
-     
-  ) 
+column_name_freq_table
+```
+
+
+To clear up this issue set the parameters below
+```{r}
+# choose the column name to go with for total pop from here on out-- by default i chose the one which showed more records
+totalpop_col_name_to_use <- "total_popn_projected" # choose the colname to use if
+
+# here i have pasted all the column names - please comment out columns that are not relevant for our work at the moment (we can always add back in later). The less columns the simpler the work will be going forward.
+
+critical_cols_to_keep <-  c("active_villages_for_the_year",
+                            "adm1_name",
+                            "adm2_name",
+                            "adm3_name",
+                            "file_name",
+                            "percent_active_villages_treated_for_round_1",
+                            "percent_active_villages_treated_for_round_2",
+                            "percent_popn_treated_round_1",
+                            "percent_popn_treated_round_2",
+                            "percent_utg_2_treated_all_rounds",
+                            "percent_utg_treated_round_1",
+                            "popn_treated_cumulative_all_rounds",
+                            "popn_treated_during_current_month",
+                            "popn_treated_round1",
+                            "popn_treated_round2",
+                            "siz_cross_border_yes_no",
+                            "total_popn_census",     # comment out name we do not need to use   
+                            "total_popn_projected" , # " " 
+                            "utg_2_treatment_target_for_the_whole_year",
+                            "utg_treatment_target_for_each_round",
+                            "villages_treated_during_current_month",
+                            "villages_treated_round_1",
+                            "villages_treated_round_2")
 
 ```
