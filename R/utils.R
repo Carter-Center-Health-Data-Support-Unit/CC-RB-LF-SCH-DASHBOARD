@@ -1,12 +1,16 @@
-#' Title
+#' compile_tab
 #'
-#' @param folder_path
-#' @param which_tabs
-#'
-#' @return
+#' @param folder_path path to directory
+#' @param which_tabs tabs to compile (default = "RB_rx")
+#' @return list of data.frames each data.frame containing the tab specified.
 #' @export
 #'
-#' @examples
+#' @examples \dontrun{
+#' root_dir <- Sys.getenv("CC_RB_LF_SCH_MONTHLY")
+#' data_dir <- glue::glue("{root_dir}/ETH/data_raw/")
+#' dataset_list <- compile_tab(folder_path = data_dir,which_tabs = "RB_rx")
+#' }
+#'
 compile_tab <-  function(folder_path, which_tabs = c("RB_rx")){
   if(which_tabs=="RB_rx"){
     sel_tabs <- "^RB Rx_Bi-annual$|^RB Rx$"
