@@ -20,7 +20,9 @@ invisible(purrr::map(dir(here("R/"),full.names = T),~source(.x,verbose = FALSE,e
 
 ## Intro
 
-The purpose of this notebook is to document the data cleaning process. Here we outline several cleaning steps:
+The purpose of this notebook is to document the data cleaning process. This documents walks through the data cleaning process and function generation. As concepts are turned into generic functions they are  added to the `R` directory. The actual data cleaning will take place with just a few functions chained together in a separate notebook, but this will serve as a good reference to how and which analytic data cleaning decisions were made
+
+Here we outline several cleaning steps:
 
 1. Compile the raw data catalog
 2. Clean raw data to make clean data catalogue
@@ -318,5 +320,49 @@ master_adm_adj |>
     )  |> 
   print(n=1000)
 
+
+```
+
+
+## Extracting relevant data
+
+The above steps have been combined into generic functions (in the R directory). A satisfactory amount of names have been cleaned and it is time to move onto the next phase where we start to compile the data.
+
+In the chunk below all of these steps developed above are run on all of the data sets loaded from the raw data catalog. The results is a list containing data.frames
+```{r}
+
+cleaned_phase1 <- dataset_list |> 
+  purrr::map2(.y = names(dataset_list),
+  ~ {
+   .x |> 
+    dplyr::mutate(
+      file_name = .y
+    ) |> 
+      parse_top_table() |> 
+      clean_names_and_admins()
+  }
+)
+
+
+
+### let's check out column names
+
+col_count <- perty_clean |> 
+  purrr::map_dfr(
+    ~ {
+       data.frame(col_names= colnames(.x))  
+    }
+     
+  ) |> 
+  count(col_names)
+
+perty_clean |> 
+  purrr::map(
+    ~ {
+       # data.frame(col_names= colnames(.x))  
+      all(c("total_popn_census" ,"total_popn_projected") %in% colnames(.x))
+    }
+     
+  ) 
 
 ```
