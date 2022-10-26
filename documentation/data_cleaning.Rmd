@@ -391,5 +391,49 @@ critical_cols_to_keep <-  c("active_villages_for_the_year",
                             "villages_treated_during_current_month",
                             "villages_treated_round_1",
                             "villages_treated_round_2")
+```
 
+## Let's compile
+
+- replace column name
+- remove junk cols
+```{r}
+
+pop_col_options <- c("total_popn_projected","total_popn_census")
+replace_this <-  setdiff(pop_col_options,totalpop_col_name_to_use)
+cleaned_compiled_phase_1a <-cleaned_phase1 |> 
+  purrr::map_dfr(
+    ~{
+      x_temp <-  .x
+      if(replace_this %in% colnames(.x)){
+       x_temp <-  .x |> 
+          rename(!!totalpop_col_name_to_use:=replace_this)
+          
+      }
+      x_temp |> select(-dplyr::any_of(matches("^x\\d*")))
+    }
+  )
+
+```
+
+Now we can investigate as one data set!
+
+```{r}
+cleaned_compiled_phase_1b <- cleaned_compiled_phase_1a |> 
+  mutate(
+    year=str_sub(string = file_name,start = 1,end = 4) |> as.numeric(),
+    month=str_sub(string = file_name,start = 5,end = 6) |> as.numeric(),
+    date= lubridate::ymd(glue::glue("{year}-{month}-01"))
+  ) 
+
+
+cleaned_compiled_phase_1b |> 
+  group_by(date, adm1_name,adm2_name,adm3_name) |> 
+  count() |> 
+  arrange(adm1_name,adm2_name, adm3_name) |> 
+  print(n=1500)
+  
+cleaned_compiled_phase_1b |> 
+  group_by(date) |> 
+  count()
 ```
