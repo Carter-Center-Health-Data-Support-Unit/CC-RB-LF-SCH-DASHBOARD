@@ -93,43 +93,79 @@ clean_adm1 <-  function(df){
 #' @export
 #'
 #' @examples
-clean_adm2 <-  function(df){
-  df |>
-    mutate(
-      # TYPE 2: INCORRECT ADMIN 1 - FIX ADMIN 1
-      adm1_name= case_when(
-        adm1_name == "snnp" & adm2_name %in%c("kaffa","kefa")~"south_west_ethiopia",
-        adm1_name == "snnp" & adm2_name %in%c("dawuro")~"south_west_ethiopia",
-        adm1_name == "snnp" & adm2_name %in%c("bench_sheko","bench_maji", "sheka")~"south_west_ethiopia",
-        adm1_name == "snnp" & adm2_name %in%c("west_omo")~"south_west_ethiopia",
-        TRUE~adm1_name
-      ),
-      # TYPE 1:  INCORRECT ADMIN 2 - FIX ADMIN 2
-      adm2_name = case_when(
-        adm2_name == "illubabor"~"ilu_aba_bora" ,
-        adm2_name == "agnuwa"~"agnewak" ,
-        adm2_name == "west_gojjam"~"west_gojam" ,
-        adm1_name == "south_west_ethiopia" & adm2_name == "kaffa"~"kefa" ,
-        adm1_name == "oromia" & adm2_name == "north_shoa"~"north_shewa_or" ,
-        adm1_name == "amhara" & adm2_name == "north_shoa"~"north_shewa_am" ,
-        adm1_name == "oromia" & adm2_name == "sw_shoa"~"south_west_shewa" ,
-        adm1_name == "gambela" & adm2_name == "mezheng"~"majang" ,
-        adm1_name == "amhara" & adm2_name == "south_wollo"~"south_wello" ,
-        adm1_name == "gambela" & adm2_name == "itang_sp_w"~"itang_special_woreda" ,
-        adm1_name == "oromia" & adm2_name == "e_arsi"~"arsi" ,
-        adm1_name %in%c("snnp", "snnpr") & adm2_name =="kaffa"~"kefa",
-        adm1_name == "benishangul_gumz" & adm2_name == "dam_workers_metekel"~"metekel" ,
-        adm1_name == "gambela" & adm2_name == "refugees_7_camps"~"refugees" ,
-        adm1_name == "gambela" & adm2_name == "refugees_7_vamps"~"refugees" ,
-        adm1_name == "gambela" & adm2_name == "refugees_gambella"~"refugees" ,
-        adm2_name == "gamogofa" ~ "gofa",
-        adm2_name == "west_omo" ~ "mirab_omo",
-        adm2_name == "west_om_b_149_o" ~ "mirab_omo",
-        adm2_name == "bench_maji" ~ "bench_sheko",
+clean_adm2 <-  function(df,data_format="current"){
 
-        TRUE ~ adm2_name
+  if(data_format=="current"){
+    res <- df |>
+      mutate(
+        # TYPE 2: INCORRECT ADMIN 1 - FIX ADMIN 1
+        adm1_name= case_when(
+          adm1_name == "snnp" & adm2_name %in%c("kaffa","kefa")~"south_west_ethiopia",
+          adm1_name == "snnp" & adm2_name %in%c("dawuro")~"south_west_ethiopia",
+          adm1_name == "snnp" & adm2_name %in%c("bench_sheko","bench_maji", "sheka")~"south_west_ethiopia",
+          adm1_name == "snnp" & adm2_name %in%c("west_omo")~"south_west_ethiopia",
+          TRUE~adm1_name
+        ),
+        # TYPE 1:  INCORRECT ADMIN 2 - FIX ADMIN 2
+        adm2_name = case_when(
+          adm2_name == "illubabor"~"ilu_aba_bora" ,
+          adm2_name == "agnuwa"~"agnewak" ,
+          adm2_name == "west_gojjam"~"west_gojam" ,
+          adm1_name == "south_west_ethiopia" & adm2_name == "kaffa"~"kefa" ,
+          adm1_name == "oromia" & adm2_name == "north_shoa"~"north_shewa_or" ,
+          adm1_name == "amhara" & adm2_name == "north_shoa"~"north_shewa_am" ,
+          adm1_name == "oromia" & adm2_name == "sw_shoa"~"south_west_shewa" ,
+          adm1_name == "gambela" & adm2_name == "mezheng"~"majang" ,
+          adm1_name == "amhara" & adm2_name == "south_wollo"~"south_wello" ,
+          adm1_name == "gambela" & adm2_name == "itang_sp_w"~"itang_special_woreda" ,
+          adm1_name == "oromia" & adm2_name == "e_arsi"~"arsi" ,
+          adm1_name %in%c("snnp", "snnpr") & adm2_name =="kaffa"~"kefa",
+          adm1_name == "benishangul_gumz" & adm2_name == "dam_workers_metekel"~"metekel" ,
+          adm1_name == "gambela" & adm2_name == "refugees_7_camps"~"refugees" ,
+          adm1_name == "gambela" & adm2_name == "refugees_7_vamps"~"refugees" ,
+          adm1_name == "gambela" & adm2_name == "refugees_gambella"~"refugees" ,
+          adm2_name == "gamogofa" ~ "gofa",
+          adm2_name == "west_omo" ~ "mirab_omo",
+          adm2_name == "west_om_b_149_o" ~ "mirab_omo",
+          adm2_name == "bench_maji" ~ "bench_sheko",
+
+          TRUE ~ adm2_name
+        )
       )
-    )
+
+  }
+  if(data_format=="old"){
+    res <- df |>
+      mutate(
+        # TYPE 1:  INCORRECT ADMIN 2 - FIX ADMIN 2
+        adm2_name = case_when(
+          adm2_name == "illubabor"~"ilu_aba_bora" ,
+          adm2_name == "agnuwa"~"agnewak" ,
+          adm2_name == "west_gojjam"~"west_gojam" ,
+          adm2_name == "kaffa"~"kefa" ,
+          adm2_name == "north_shoa"~"north_shewa_or" ,
+          adm2_name == "north_shoa"~"north_shewa_am" ,
+          adm2_name == "sw_shoa"~"south_west_shewa" ,
+          adm2_name == "mezheng"~"majang" ,
+          adm2_name == "south_wollo"~"south_wello" ,
+          adm2_name == "itang_sp_w"~"itang_special_woreda" ,
+          adm2_name == "e_arsi"~"arsi" ,
+          adm2_name =="kaffa"~"kefa",
+          adm2_name == "dam_workers_metekel"~"metekel" ,
+          adm2_name == "refugees_7_camps"~"refugees" ,
+          adm2_name == "refugees_7_vamps"~"refugees" ,
+          adm2_name == "refugees_gambella"~"refugees" ,
+          adm2_name == "gamogofa" ~ "gofa",
+          adm2_name == "west_omo" ~ "mirab_omo",
+          adm2_name == "west_om_b_149_o" ~ "mirab_omo",
+          adm2_name == "bench_maji" ~ "bench_sheko",
+
+          TRUE ~ adm2_name
+        )
+      )
+  }
+  return(res)
+
 }
 
 
@@ -274,19 +310,32 @@ clean_adm3 <- function(df){
 #' @export
 #'
 #' @examples
-standardize_admin_names <-  function(df){
+standardize_admin_names <-  function(df,data_format="current"){
 
-  missing_adm_col <- setdiff(c("region","zone","name_of_woredas"),
-                         colnames(clean_parsed_df))
+  if(data_format=="current"){
 
-  assertthat::assert_that(length(missing_adm_col)==0,
-  msg = glue::glue("{crayon::red(missing_adm_col)} is missing from raw data"))
-  df |>
-    dplyr::rename(
-      adm1_name = "region",
-      adm2_name = "zone",
-      adm3_name = "name_of_woredas"
-    )
+    missing_adm_col <- setdiff(c("region","zone","name_of_woredas"),
+                               colnames(clean_parsed_df))
+
+    assertthat::assert_that(length(missing_adm_col)==0,
+                            msg = glue::glue("{crayon::red(missing_adm_col)} is missing from raw data"))
+    res <- df |>
+      dplyr::rename(
+        adm1_name = "region",
+        adm2_name = "zone",
+        adm3_name = "name_of_woredas"
+      )
+
+  }
+  if(data_format=="old"){
+    res <- df|>
+      dplyr::rename_with(.cols = dplyr::any_of(c("name_of_zone" )),.fn = ~"zone") |>
+      dplyr::rename(
+        adm2_name = "zone"
+      )
+  }
+  return(res)
+
 
 }
 
@@ -299,29 +348,46 @@ standardize_admin_names <-  function(df){
 #' @export
 #'
 #' @examples
-drop_summary_rows <-  function(df){
-  df |>
-    filter(
-    !is.na(adm1_name),
-    !str_detect(adm1_name,"^[Zz]onal"),
-    !str_detect(adm1_name,"^[Rr]egion")
-  )
+drop_summary_rows <-  function(df,data_format="current"){
+  if(data_format=="current"){
+    df |>
+      filter(
+        !is.na(adm1_name),
+        !str_detect(adm1_name,"^[Zz]onal"),
+        !str_detect(adm1_name,"^[Rr]egion")
+      )
+  }
+  if(data_format=="old"){
+    res <- df |>
+      sanitize_admins() |>
+      dplyr::filter(
+        !is.na(adm2_name),
+        !str_detect(adm2_name,"^[Tt]otal"),
+        !str_detect(adm2_name,"^note"),
+        !str_detect(adm2_name,"^treatment")
+        )
+
+  }
+  return(res)
 
 }
 
 
 
-clean_names_and_admins <-  function(df){
+clean_names_and_admins <-  function(df,data_format="current"){
   df |>
-    janitor::clean_names() |>
-    standardize_admin_names()|>
-    drop_summary_rows() |>
-    sep_adm_2_3() |>
-    sanitize_admins() |>
-    clean_adm1() |>
-    clean_adm2() |>
-    clean_adm3() |>
-    remove_empty_artefact_cols()
+      janitor::clean_names() |>
+      standardize_admin_names(data_format = data_format)|>
+      drop_summary_rows() |>
+      sep_adm_2_3() |>
+      sanitize_admins() |>
+      clean_adm1() |>
+      clean_adm2() |>
+      clean_adm3() |>
+      remove_empty_artefact_cols()
+
+
+
 
 }
 

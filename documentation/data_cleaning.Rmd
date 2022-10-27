@@ -323,12 +323,10 @@ master_adm_adj |>
 
 ```
 
+## Putting it all together
 
-## Select relevant/critical variables
+All the previoous steps have been functionalized and can be implemented like this:
 
-The above steps have been combined into generic functions (in the R directory). A satisfactory amount of names have been cleaned and it is time to move onto the next phase where we start to compile the data.
-
-In the chunk below all of these steps developed above are run on all of the data sets loaded from the raw data catalog. The results is a list containing data.frames
 ```{r}
 
 cleaned_phase1 <- dataset_list |> 
@@ -339,10 +337,76 @@ cleaned_phase1 <- dataset_list |>
       file_name = .y
     ) |> 
       parse_top_table() |> 
-      clean_names_and_admins()
+      clean_names_and_admins(data_format = "current")
   }
 )
 ```
+
+
+## Pre May 2019 RB Rx
+
+Now I am building out the functions to clean the old format data - trying to do this by just adding arguments to the already made functions (for the most part).
+
+```{r}
+
+# compile the ACTIVE TX UTG2 tabs which were the old format for the RB Rx data
+pre_201905_rbrx<- compile_tab(folder_path = data_dir, which_tabs = "Active TX UTG2",skip = 2 )
+
+# old format data includes only adm2 -- therefore first step to harmonize the names
+# is to use pre-existing reclassifications based on just adm2 - thats what `clean_adm2` doesin this case
+# however it wont be perfect and will require we add some more reclassificaitons
+
+pre_201905_rbrx_clean1 <- pre_201905_rbrx |> 
+  purrr::map( ~ {
+    .x |>
+      parse_top_table() |> 
+      janitor::clean_names() |> 
+      standardize_admin_names(data_format = "old") |> 
+       drop_summary_rows(data_format = "old") |>
+      sanitize_admins() |> 
+      clean_adm2(data_format = "old")
+      
+  }
+  )
+```
+
+
+Here we check all of the pre may 2019 adm2 names used against the master list
+
+
+```{r}
+
+# make unique list of all pre may 2019 adm2 names (they have been cleaned as much as they could based on previous `case_when`)
+ pre_201905_adm2_unique <- pre_201905_rbrx_clean1 |> 
+  purrr::map_dfr(~.x |> 
+                   select(adm2_name)
+ ) |> 
+   distinct() 
+
+
+# now here are the problems - if no adm1_en is listed that means adm2_name didn't match anything in the master.
+
+ pre_201905_adm2_unique |> 
+   left_join(
+     master_adm_adj |> 
+       select(adm1_en, adm2_en) |> 
+       distinct(),
+     by= c("adm2_name"="adm2_en")
+     ) |> 
+   filter(is.na(adm1_en)) |> 
+   print(n=40)
+
+```
+
+
+## Select relevant/critical variables
+
+The above steps have been combined into generic functions (in the R directory). A satisfactory amount of names have been cleaned and it is time to move onto the next phase where we start to compile the data.
+
+In the chunk below all of these steps developed above are run on all of the data sets loaded from the raw data catalog. The results is a list containing data.frames
+
+
+
 
 Now we need to figure out which columns are important to keep for the compiled data set. Let's make a frequency table of columns names.
 
@@ -410,7 +474,8 @@ cleaned_compiled_phase_1a <-cleaned_phase1 |>
           rename(!!totalpop_col_name_to_use:=replace_this)
           
       }
-      x_temp |> select(-dplyr::any_of(matches("^x\\d*")))
+      x_temp |>
+        dplyr::select(-dplyr::any_of(matches("^x\\d*")))
     }
   )
 
