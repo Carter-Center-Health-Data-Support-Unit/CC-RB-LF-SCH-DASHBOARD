@@ -315,7 +315,7 @@ standardize_admin_names <-  function(df,data_format="current"){
   if(data_format=="current"){
 
     missing_adm_col <- setdiff(c("region","zone","name_of_woredas"),
-                               colnames(clean_parsed_df))
+                               colnames(df))
 
     assertthat::assert_that(length(missing_adm_col)==0,
                             msg = glue::glue("{crayon::red(missing_adm_col)} is missing from raw data"))
@@ -350,7 +350,7 @@ standardize_admin_names <-  function(df,data_format="current"){
 #' @examples
 drop_summary_rows <-  function(df,data_format="current"){
   if(data_format=="current"){
-    df |>
+   res <-  df |>
       filter(
         !is.na(adm1_name),
         !str_detect(adm1_name,"^[Zz]onal"),
