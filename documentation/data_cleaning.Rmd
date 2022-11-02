@@ -383,7 +383,7 @@ Here we check all of the pre may 2019 adm2 names used against the master list
  ) |> 
    distinct() 
 
-
+pre_201905_rbrx_clean1$`201601_ETH_CCRBLFSCHI_Monthly.xlsx` |> colnames()
 # now here are the problems - if no adm1_en is listed that means adm2_name didn't match anything in the master.
 
  pre_201905_adm2_unique |> 
@@ -397,6 +397,28 @@ Here we check all of the pre may 2019 adm2 names used against the master list
    print(n=40)
 
 ```
+
+
+
+
+While waiting on input to ``clean_adm2()` i can inspect old col names and fix based on new.
+```{r,eval =T}
+
+rename_lookup<- readxl::read_xlsx(path = "colname_harmonization_lookup.xlsx") 
+
+pre_201905_rbrx_clean1 |> 
+  purrr::map2(.y= names(pre_201905_rbrx_clean1), ~{
+    print(.y)
+               rename_cols_with_lookup(df = .x,lookup = rename_lookup,lookup_fixed = F)
+             
+  }
+  )
+    
+
+
+
+```
+
 
 
 ## Select relevant/critical variables
@@ -420,7 +442,8 @@ column_name_freq_table <- cleaned_phase1 |>
   ) |> 
   count(col_names)
 
-column_name_freq_table
+column_name_freq_table |> 
+    write.table("clipboard", sep="\t", row.names=FALSE)
 ```
 
 
