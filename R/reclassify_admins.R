@@ -159,8 +159,28 @@ clean_adm2 <-  function(df,data_format="current"){
           adm2_name == "west_omo" ~ "mirab_omo",
           adm2_name == "west_om_b_149_o" ~ "mirab_omo",
           adm2_name == "bench_maji" ~ "bench_sheko",
+          adm2_name == "konta_spe_district"~ "konta_special",
+          adm2_name == "yem_spe_district"~ "yem_special",
+          adm2_name == "e_gojjam"~"east_gojam",
+          adm2_name == "w_gojjam"~"west_gojam",
+          adm2_name == "agnua"~"agnewak",
+          adm2_name == "itang_spe_woreda"  ~  "itang_special_woreda",
+          adm2_name == "konta_spe_woreda"~ "konta_special",
+          adm2_name ==  "yem_spe_woreda" ~ "yem_special",
+          adm2_name == "basketo_sp_district"~ "basketo",
+          adm2_name == "east_harerge"~"east_hararge",
+          adm2_name == "west_harerge"~"west_hararge",
+          adm2_name == "west_harerge"~"west_hararge",
+          adm2_name =="refugges_gambella"~"refugees" ,# this is how it's reclassified in "new", but not sure if should add gambella tag here since we don't have adm1...
 
           TRUE ~ adm2_name
+
+
+
+
+
+
+
         )
       )
   }
@@ -364,7 +384,8 @@ drop_summary_rows <-  function(df,data_format="current"){
         !is.na(adm2_name),
         !str_detect(adm2_name,"^[Tt]otal"),
         !str_detect(adm2_name,"^note"),
-        !str_detect(adm2_name,"^treatment")
+        !str_detect(adm2_name,"^treatment"),
+        !str_detect(adm2_name,"^7_kebeles_in_surma_district_of_bench_maji_zone*")
         )
 
   }

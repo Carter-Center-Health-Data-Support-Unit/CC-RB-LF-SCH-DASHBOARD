@@ -356,6 +356,7 @@ pre_201905_rbrx<- compile_tab(folder_path = data_dir, which_tabs = "Active TX UT
 # is to use pre-existing reclassifications based on just adm2 - thats what `clean_adm2` doesin this case
 # however it wont be perfect and will require we add some more reclassificaitons
 
+
 pre_201905_rbrx_clean1 <- pre_201905_rbrx |> 
   purrr::map( ~ {
     .x |>
@@ -371,6 +372,8 @@ pre_201905_rbrx_clean1 <- pre_201905_rbrx |>
 ```
 
 
+
+### Pre 2019 clean adm2
 Here we check all of the pre may 2019 adm2 names used against the master list
 
 
@@ -395,6 +398,10 @@ pre_201905_rbrx_clean1$`201601_ETH_CCRBLFSCHI_Monthly.xlsx` |> colnames()
      ) |> 
    filter(is.na(adm1_en)) |> 
    print(n=40)
+master_adm_adj |> 
+  distinct(adm2_en) |> 
+  filter(str_detect(adm2_en,"gam"))
+
 
 ```
 
@@ -406,10 +413,17 @@ While waiting on input to ``clean_adm2()` i can inspect old col names and fix ba
 
 rename_lookup<- readxl::read_xlsx(path = "colname_harmonization_lookup.xlsx") 
 
-pre_201905_rbrx_clean1 |> 
-  purrr::map2(.y= names(pre_201905_rbrx_clean1), ~{
+pre201905_clean_phase_1b <- pre_201905_rbrx_clean1 |> 
+  purrr::map2_dfr(.y= names(pre_201905_rbrx_clean1), ~{
     print(.y)
-               rename_cols_with_lookup(df = .x,lookup = rename_lookup,lookup_fixed = F)
+              df_names_harmonized <-rename_cols_with_lookup(df = .x,lookup = rename_lookup,lookup_fixed = F)
+              df_names_harmonized |> 
+                dplyr::mutate(
+                  file_name= .y,
+                  year=str_sub(string = file_name,start = 1,end = 4) |> as.numeric(),
+                  month=str_sub(string = file_name,start = 5,end = 6) |> as.numeric(),
+                  date= lubridate::ymd(glue::glue("{year}-{month}-01"))
+                )
              
   }
   )
@@ -442,8 +456,8 @@ column_name_freq_table <- cleaned_phase1 |>
   ) |> 
   count(col_names)
 
-column_name_freq_table |> 
-    write.table("clipboard", sep="\t", row.names=FALSE)
+# column_name_freq_table |> 
+#     write.table("clipboard", sep="\t", row.names=FALSE)
 ```
 
 
@@ -472,7 +486,7 @@ critical_cols_to_keep <-  c("active_villages_for_the_year",
                             "popn_treated_round2",
                             "siz_cross_border_yes_no",
                             "total_popn_census",     # comment out name we do not need to use   
-                            "total_popn_projected" , # " " 
+                            # "total_popn_projected" , # " " 
                             "utg_2_treatment_target_for_the_whole_year",
                             "utg_treatment_target_for_each_round",
                             "villages_treated_during_current_month",
@@ -524,4 +538,55 @@ cleaned_compiled_phase_1b |>
 cleaned_compiled_phase_1b |> 
   group_by(date) |> 
   count()
+
+
+cleaned_compiled_phase_1c <- cleaned_compiled_phase_1b |> 
+  mutate(
+    across(everything(), ~as.character(.x))
+  ) |> 
+  readr::type_convert( ) |> 
+  dplyr::mutate(
+    active_villages_for_the_year =as.numeric(active_villages_for_the_year)
+  )
+  
+
+# cleaned_compiled_phase_1c |> 
+#   # pull(active_villages_for_the_year)
+#   filter(as.numeric(active_villages_for_the_year)>2000) |> 
+#   glimpse()
+pre_post_compiled <- bind_rows(pre201905_clean_phase_1b,cleaned_compiled_phase_1c)
+
+```
+
+
+# time to visually inspect for cleaning
+
+```{r}
+pre201905_clean_phase_1b$adm2_name |> tabyl()
+pre_post_compiled |> 
+  glimpse()
+pre201905_clean_phase_1b |> 
+  filter(
+    adm2_name=="7_kebeles_in_surma_district_of_bench_maji_zone_were_not_included_in_the_cdti_due_to_nomadic_nature_of_the_people_and_out_of_those_treated_3_villages_were_not_treated_due_to_security_problem"
+  )
+
+```
+
+
+```{r}
+
+set_col_class_from_df <- function(df_target, df_class=pre201905_clean_phase_1b){
+  class_lookup_df <- df_class |> 
+  summarise(
+    across(.cols = everything(),~class(.x))
+  ) |> 
+    pivot_longer(everything())
+  class_lookup_vec <- class_lookup_df$value |> set_names(class_lookup_df$name)
+  df_target |> 
+    dplyr::mutate(
+      dplyr::across(.cols = names(class_lookup_vec),~type)
+    )
+  
+}
+  
 ```
