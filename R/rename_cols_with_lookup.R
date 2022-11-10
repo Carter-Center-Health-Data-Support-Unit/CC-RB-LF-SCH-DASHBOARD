@@ -19,6 +19,12 @@ rename_cols_with_lookup <-  function(df,lookup,lookup_fixed=F){
     ) |>
     dplyr::distinct(old_format_names_clean,new_format_names)
 
+
+
+  old_names_rm <-  lookup |>
+    filter(old_keep==0) |>
+    pull(old_format_names_clean)
+
   if(!lookup_fixed){
 
     lookup_filtered <- lookup_filtered |>
@@ -28,10 +34,14 @@ rename_cols_with_lookup <-  function(df,lookup,lookup_fixed=F){
   }
 
 
-  df |>
+  df_renamed <- df |>
     rename_with(
-      .fn = ~lookup_filtered$new_format_names,
-      .cols = lookup_filtered$old_format_names_clean
-    )
+      .cols = lookup_filtered$old_format_names_clean,
+      .fn = ~lookup_filtered$new_format_names
+    ) |>
+    dplyr::select(- dplyr::any_of(c(old_names_rm)))
+
+  return(df_renamed)
+  # if(df_renamed)
 
 }
