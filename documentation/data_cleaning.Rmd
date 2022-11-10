@@ -365,10 +365,19 @@ pre_201905_rbrx_clean1 <- pre_201905_rbrx |>
       standardize_admin_names(data_format = "old") |> 
        drop_summary_rows(data_format = "old") |>
       sanitize_admins() |> 
-      clean_adm2(data_format = "old")
+      clean_adm2(data_format = "old") |> 
+        left_join(
+          master_adm_adj |> 
+            select(adm1_name=adm1_en, adm2_name = adm2_en) |>
+            distinct(),
+          by=c("adm2_name"="adm2_name")
+  ) 
       
   }
-  )
+  ) 
+
+
+
 ```
 
 
@@ -428,7 +437,26 @@ pre201905_clean_phase_1b <- pre_201905_rbrx_clean1 |>
   }
   )
     
+pre_test <- test |> 
+  purrr::map2_dfr(.y= names(test), ~{
+    print(.y)
+              df_names_harmonized <-rename_cols_with_lookup(df = .x,lookup = rename_lookup,lookup_fixed = F)
+              df_names_harmonized |> 
+                dplyr::mutate(
+                  file_name= .y,
+                  year=str_sub(string = file_name,start = 1,end = 4) |> as.numeric(),
+                  month=str_sub(string = file_name,start = 5,end = 6) |> as.numeric(),
+                  date= lubridate::ymd(glue::glue("{year}-{month}-01"))
+                )
+             
+  }
+  )
 
+pre_test |> 
+  filter(adm2_name=="awi") |> 
+  select(date,everything()) |> 
+  print(n=35)
+    
 
 
 ```
@@ -554,7 +582,14 @@ cleaned_compiled_phase_1c <- cleaned_compiled_phase_1b |>
 #   # pull(active_villages_for_the_year)
 #   filter(as.numeric(active_villages_for_the_year)>2000) |> 
 #   glimpse()
+pre201905_clean_phase_1b |> 
+  filter(is.na(adm1_en))
 pre_post_compiled <- bind_rows(pre201905_clean_phase_1b,cleaned_compiled_phase_1c)
+pre_post_compiled |> 
+  glimpse()
+
+
+pre_post_compiled$total_popn_projected
 
 ```
 
@@ -562,15 +597,205 @@ pre_post_compiled <- bind_rows(pre201905_clean_phase_1b,cleaned_compiled_phase_1
 # time to visually inspect for cleaning
 
 ```{r}
-pre201905_clean_phase_1b$adm2_name |> tabyl()
-pre_post_compiled |> 
-  glimpse()
-pre201905_clean_phase_1b |> 
-  filter(
-    adm2_name=="7_kebeles_in_surma_district_of_bench_maji_zone_were_not_included_in_the_cdti_due_to_nomadic_nature_of_the_people_and_out_of_those_treated_3_villages_were_not_treated_due_to_security_problem"
+pre_post_compiled |> View()
+pre_post_compiled |> count(adm2_name)
+numeric_summary_tbl <- pre_post_compiled |> 
+  group_by(date) |> 
+  summarise(
+    across(.cols = where(is.numeric),~sum(.x,na.rm=T))
+  ) 
+
+numeric_summary_tbl |> 
+  ggplot(aes(x=date,
+             y = popn_treated_cumulative_all_rounds)
+         )+
+  geom_line(color="orange")+
+  theme_bw()
+
+monthly_adm2_summary_tbl <- pre_post_compiled |> 
+  group_by(date, adm2_name) |> 
+  summarise(
+  across(.cols = where(is.numeric),~sum(.x,na.rm=T))
+  ) 
+
+top_n_adm2<- monthly_adm2_summary_tbl |> 
+  group_by(adm2_name) |> 
+  summarise(
+    pop_treated_cum=sum(popn_treated_cumulative_all_rounds,na.rm = T)
+    ) |> 
+  arrange(desc(pop_treated_cum)) |> 
+  slice(1:5)
+
+monthly_adm2_summary_tbl <- monthly_adm2_summary_tbl |> 
+  mutate(
+    adm2_name_regrouped= if_else(adm2_name %in% top_n_adm2$adm2_name,
+                                 adm2_name,
+                                 "other")
+  )
+# Example color palette
+colourslist <- scales::hue_pal()(length(unique(monthly_adm2_summary_tbl$adm2_name_regrouped)))
+# Name your list of colors
+names(colourslist) <- unique(monthly_adm2_summary_tbl$adm2_name_regrouped)
+
+
+
+monthly_adm2_summary_tbl |> 
+  ggplot(aes(x=date,
+             y = popn_treated_during_current_month,
+             # group=adm2_name_regrouped,
+             # color=adm2_name_regrouped
+             group=adm2_name,
+             color=adm2_name
+             )
+         )+
+  geom_line(stat = "identity")+
+  scale_x_date(date_breaks = "1 months",date_labels = "%y%b")+
+  scale_color_manual(values = colourslist,breaks = c(top_n_adm2$adm2_name,"other"))+
+  scale_y_continuous(labels = scales::label_number(suffix = " M", scale = 1e-6),breaks = seq(0,1e6*150,1e6*25))+
+  theme_bw()+
+  theme(
+    axis.text.x = element_text(angle = 90),
+    axis.text.y=element_text(angle = 90),
+    axis.title = element_blank()
   )
 
+
+monthly_adm2_summary_tbl |> 
+  ggplot(aes(x=adm2_name,
+             y=popn_treated_during_current_month,
+             # fill= adm2_name,
+             )
+         )+
+  geom_boxplot(
+    # stat = "identity"
+    )+
+  # scale_x_date(date_breaks = "1 months",date_labels = "%y%b")+
+  # scale_color_manual(values = colourslist,breaks = c(top_n_adm2$adm2_name,"other"))+
+  scale_y_continuous(labels = scales::label_number(suffix = " M", scale = 1e-6),breaks = seq(0,1e6*150,1e6*5))+
+  coord_flip()+
+  theme_bw()+
+  theme(
+    axis.text.x = element_text(angle = 90),
+    # axis.text.y=element_text(angle = 90),
+    axis.title = element_blank()
+  )
+
+
+monthly_adm2_summary_tbl |> 
+  ggplot(aes(x=adm2_name,
+             y=popn_treated_during_current_month,
+             )
+         )+
+  geom_boxplot(
+  )+
+  
+  scale_y_log10(
+    labels = scales::label_number(suffix = " M", scale = 1e-6),
+                breaks = c(25000,
+                           50000,
+                           100000,
+                           200000, 
+                           400000,
+                           800000,
+                           1600000,
+                           5e6)
+    )+
+  coord_flip()+
+  theme_bw()+
+  theme(
+    axis.text.x = element_text(angle = 90),
+    # axis.text.y=element_text(angle = 90),
+    axis.title = element_blank()
+  )
+
+
+monthly_adm2_summary_tbl |> 
+  filter(popn_treated_during_current_month<2e6,popn_treated_during_current_month!=0) |> 
+  ggplot(aes(x=adm2_name,
+             y=popn_treated_during_current_month,
+             # fill= adm2_name,
+             )
+         )+
+  geom_boxplot()+
+  scale_y_continuous(
+  # labels = scales::label_number(suffix = " M", scale = 1e-6),
+    breaks = seq(0,2e6, 100000)
+    )+
+  coord_flip()+
+  theme_bw()+
+  theme(
+    axis.text.x = element_text(angle = 90),
+    # axis.text.y=element_text(angle = 90),
+    axis.title = element_blank()
+  )
+monthly_adm2_summary_tbl |> 
+  filter(adm2_name=="jimma", popn_treated_during_current_month!=0) |> 
+  count(popn_treated_during_current_month) 
+ 
+pre_post_compiled |> 
+  filter(adm2_name=="jimma", popn_treated_during_current_month!=0) |> 
+  count(popn_treated_during_current_month) |> 
+  arrange(desc(popn_treated_during_current_month)) |> 
+  print(n=90)
+
+
+pre_post_compiled |> 
+  filter(popn_treated_during_current_month>0) |> 
+  ggplot(aes(x = popn_treated_during_current_month, y = adm2_name, fill=adm2_name)) +
+  ggridges::geom_density_ridges(rel_min_height = 0.01, scale=3, alpha = 0.7)+
+  labs(title = "Population treated during current month (density)",
+       )+
+  scale_x_continuous(
+    labels = scales::comma_format(),
+    breaks = c(50000,100000, 150000,500000,1e6, 2e6)
+    )+
+  # geom_vline(xintercept = 150000)+
+  theme_bw()+
+  theme(
+    legend.position = "none",
+    axis.title = element_blank(),
+    axis.text.x = element_text(angle=90)
+  )
+
+
+
+
 ```
+
+looks like duplicates introduced. why are there duplicates its only happening to pre
+```{r}
+# check date ranges
+cleaned_compiled_phase_1c |> pull(date) |> range()
+pre201905_clean_phase_1b |> pull(date) |> range()
+pre201905_clean_phase_1b
+
+pre_post_compiled |> select(date)
+pre_post_compiled |> 
+  filter(adm2_name=="jimma",
+         popn_treated_during_current_month!=0,
+         popn_treated_during_current_month>200000
+         ) |> 
+  select(date, everything()) |> 
+  print(n=100)
+
+pre201905_clean_phase_1b |> 
+  filter(adm2_name=="jimma",
+         popn_treated_during_current_month!=0,
+         popn_treated_during_current_month>200000
+         ) |> 
+  select(date, everything()) |> 
+  print(n=100)
+  
+count(popn_treated_during_current_month) |> 
+  arrange(desc(popn_treated_during_current_month)) |> 
+  print(n=90)
+
+
+
+```
+
+
+
 
 
 ```{r}
@@ -588,5 +813,5 @@ set_col_class_from_df <- function(df_target, df_class=pre201905_clean_phase_1b){
     )
   
 }
-  
+  master_adm_adj |> filter(str_detect(adm1_en,"gam"))
 ```
