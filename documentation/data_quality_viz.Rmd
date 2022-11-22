@@ -1,0 +1,190 @@
+---
+title: "Data Quality Visualizations"
+author: "Zack Arno"
+date: '2022-11-15'
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Intro
+
+
+
+```{r libs_data}
+library(tidyverse)
+targets::tar_load_everything()
+```
+
+## Including Plots
+
+You can also embed plots, for example:
+
+```{r pressure, echo=FALSE}
+RB_pre_post_compiled |> 
+  filter(popn_treated_during_current_month>0) |> 
+  ggplot(aes(x = popn_treated_during_current_month, y = adm2_name, fill=adm2_name)) +
+  ggridges::geom_density_ridges(rel_min_height = 0.01, scale=3, alpha = 0.7)+
+  labs(title = "Population treated during current month (density)",
+       )+
+  scale_x_continuous(
+    labels = scales::comma_format(),
+    breaks = c(50000,100000, 150000,500000,1e6, 2e6)
+    )+
+  # geom_vline(xintercept = 150000)+
+  theme_bw()+
+  theme(
+    legend.position = "none",
+    axis.title = element_blank(),
+    axis.text.x = element_text(angle=90)
+  )
+
+```
+
+
+```{r}
+
+give.n <- function(x){
+  return(c(y = 1.6e6, label = length(x))) 
+  # experiment with the multiplier to find the perfect position
+}
+RB_pre_post_compiled |> 
+  filter(adm2_name=="east_gojam") |> 
+  View()
+
+RB_post201905_df_compiled |> 
+  glimpse()
+
+
+RB_post201905_df_compiled
+RB_pre_post_compiled |> 
+  select(date,adm1_name, adm2_name, adm3_name,everything()) |> 
+  glimpse()
+
+RB_pre_post_compiled |> 
+  ggplot(aes(x=adm2_name,
+             y=popn_treated_during_current_month))+
+  geom_boxplot()+
+  scale_y_continuous(
+    labels = scales::label_number(suffix = " M", scale = 1e-6),
+                breaks = c(
+                           50000,
+                           100000,
+                           200000, 
+                           400000,
+                           800000,
+                           1600000,
+                           5e6)
+    )+
+  stat_summary(fun.data = give.n, geom = "text", fun.y = median,
+                  position = position_dodge(width = 0.75))+
+  coord_flip()+
+  theme_bw()+
+  theme(
+    axis.text.x = element_text(angle = 90),
+    # axis.text.y=element_text(angle = 90),
+    axis.title = element_blank()
+  )
+
+```
+
+
+## Box plot showing 
+```{r}
+avg_pop_reported <- RB_pre_post_compiled |>
+  group_by(adm2_name) |> 
+  summarise(
+    avg_pop_reported = mean(total_popn_census,na.rm=T)
+  )
+
+RB_pre_post_compiled <- RB_pre_post_compiled |> 
+  left_join(avg_pop_reported) |> 
+  mutate(
+    reported_higher_than_pop = if_else(popn_treated_during_current_month>avg_pop_reported,"red","black")
+  )
+
+RB_pre_post_compiled |> 
+  ggplot(aes(x=adm2_name,
+             y=popn_treated_during_current_month
+             # boxfill= reported_higher_than_pop
+             ))+
+  geom_boxplot()+
+  scale_y_continuous(
+    labels = scales::label_number(suffix = " M", scale = 1e-6),
+                breaks = c(
+                           50000,
+                           100000,
+                           200000, 
+                           400000,
+                           800000,
+                           1600000,
+                           5e6)
+    )+
+  geom_point(data=avg_pop_reported,
+             aes(x=adm2_name,
+                 y=avg_pop_reported,color="reported census\npopulation"
+                 ))+
+  scale_color_manual(name = "", values = c("reported census\npopulation" = "red")) +
+  coord_flip()+
+  theme_bw()+
+  ggtitle(label = "Distribution of reported values for pop treated in current month by zone")+
+  theme(
+    axis.text.x = element_text(angle = 90),
+    # axis.text.y=element_text(angle = 90),
+    axis.title = element_blank(),
+        legend.position = c(.95, .95),
+    legend.justification = c("right", "top"),
+    legend.box.just = "right",
+    legend.margin = margin(6, 6, 6, 6)
+  )
+
+  
+RB_pre_post_compiled |> 
+  filter(is.na(adm3_name)) |> 
+  group_by(adm1_name,adm2_name, date) |> 
+  count() |> 
+  filter(n>1)
+
+RB_pre_post_compiled |> 
+  mutate(
+    uid=row_number()
+  ) |> 
+  left_join(avg_pop_reported) |> 
+  filter(popn_treated_during_current_month>=avg_pop_reported) |> 
+  select(uid,date,adm1_name,adm2_name,adm3_name,popn_treated_during_current_month,avg_pop_reported) |> 
+  pivot_longer(popn_treated_during_current_month,names_to = "column",values_to = "reported_value") |> 
+  mutate(new_value=NA,
+         reason_flagged= glue::glue("pop treated ({reported_value})> total pop ({round(avg_pop_reported,0)})"),
+         note=NA) |> 
+  select(-avg_pop_reported ) |> 
+  write_csv("20221116_cleaning_log_example.csv",na = "")
+  mutate(popn_treated_during_current_month_new =NA)
+
+#|> 
+  count(adm1_name, adm2_name,adm3_name, date) |> 
+  arrange(desc(n))
+
+```
+
+
+```{r}
+RB_pre_post_compiled |> 
+  filter(adm2_name=="east_gojam") |> glimpse()
+
+    RB_pre201905_df_ls |>
+      purrr::map_dfr( ~ {
+        .x |>
+          parse_top_table() |>
+          janitor::clean_names() |>
+          standardize_admin_names(data_format = "old") |>
+          drop_summary_rows(data_format = "old") |>
+          sanitize_admins() |>
+          filter(adm2_name=="e_gojjam")
+          # clean_adm2(data_format = data_format)
+
+
+      }
+      ) |> View()
+```

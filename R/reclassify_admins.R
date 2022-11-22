@@ -406,10 +406,6 @@ clean_names_and_admins <-  function(df,data_format="current"){
       clean_adm2() |>
       clean_adm3() |>
       remove_empty_artefact_cols()
-
-
-
-
 }
 
 
@@ -428,4 +424,130 @@ remove_empty_artefact_cols <-  function(df){
   }
 
 }
+
+
+
+#' extract_pre_clean_names_adms_batch
+#' @description take list of data.frames/ iterative mutate on file name col, parse extract and parse top table, rename admin cols, sanitize admin cols, rename admin cols according to evolving lookup case_when
+#' @param df_list
+#' @param data_format
+#'
+#' @return
+#' @export
+#'
+#' @examples
+extract_pre_clean_names_adms_batch <- function(df_list,data_format= "current"){
+  if(data_format=="current"){
+    res <- df_list |>
+      purrr::map2(.y = names(df_list),
+                  ~ {
+                    .x |>
+                      dplyr::mutate(
+                        file_name = .y
+                      ) |>
+                      parse_top_table() |>
+                      clean_names_and_admins(data_format = data_format)
+                  }
+      )
+
+
+  }
+
+  if(data_format=="old"){
+    res <-  df_list |>
+      purrr::map( ~ {
+        .x |>
+          parse_top_table() |>
+          janitor::clean_names() |>
+          standardize_admin_names(data_format = data_format) |>
+          drop_summary_rows(data_format = data_format) |>
+          sanitize_admins() |>
+          clean_adm2(data_format = data_format)
+
+
+      }
+      )
+
+  }
+  return(res)
+
+}
+
+
+rename_cols_lookup_add_dates_batch <- function(df_list,colname_lookup,lookup_fixed=T){
+  df_list |>
+    purrr::map2_dfr(.y= names(df_list), ~{
+      print(.y)
+      df_names_harmonized <-rename_cols_with_lookup(df = .x,
+                                                    lookup = colname_lookup,lookup_fixed = lookup_fixed)
+      df_names_harmonized |>
+        dplyr::mutate(
+          file_name= .y,
+          year=str_sub(string = file_name,start = 1,end = 4) |> as.numeric(),
+          month=str_sub(string = file_name,start = 5,end = 6) |> as.numeric(),
+          date= lubridate::ymd(glue::glue("{year}-{month}-01"))
+        )
+
+    }
+    )
+
+}
+
+
+
+
+#' adjust_master_admins
+#'
+#' @param df master admin (ethiopia from OCHA)
+#'
+#' @return df with "sanitized admins" and new col with adm1 + 2 + 3 concatenated
+#' @export
+#'
+#' @examples
+adjust_master_admin_file <- function(df){
+   df |>
+    sanitize_admins() |>
+    mutate(
+      adm_1_2_3=  glue::glue("{adm1_en}-{adm2_en}-{adm3_en}")
+    )
+
+}
+
+join_master_admin_to_pre201905_data <- function(df_list, master_adm){
+  df_list |>
+    purrr::map(
+      ~.x |>
+        dplyr::left_join(
+          master_adm |>
+            dplyr::select(adm1_name=adm1_en, adm2_name = adm2_en) |>
+            dplyr::distinct(),
+          by=c("adm2_name"="adm2_name")
+        )
+    )
+
+}
+
+
+# for current data
+bind_rows_add_dates <-  function(df_list){
+  dplyr::bind_rows(df_list) |>
+    dplyr::mutate(
+      year=str_sub(string = file_name,start = 1,end = 4) |> as.numeric(),
+      month=str_sub(string = file_name,start = 5,end = 6) |> as.numeric(),
+      date= lubridate::ymd(glue::glue("{year}-{month}-01"))
+    ) |>
+    dplyr::mutate(
+      across(everything(), ~as.character(.x))
+    ) |>
+    readr::type_convert( ) |>
+    dplyr::mutate(
+      active_villages_for_the_year =as.numeric(active_villages_for_the_year)
+    )
+
+
+}
+
+
+
+
 

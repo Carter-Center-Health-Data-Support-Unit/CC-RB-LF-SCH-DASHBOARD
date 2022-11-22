@@ -425,7 +425,8 @@ rename_lookup<- readxl::read_xlsx(path = "colname_harmonization_lookup.xlsx")
 pre201905_clean_phase_1b <- pre_201905_rbrx_clean1 |> 
   purrr::map2_dfr(.y= names(pre_201905_rbrx_clean1), ~{
     print(.y)
-              df_names_harmonized <-rename_cols_with_lookup(df = .x,lookup = rename_lookup,lookup_fixed = F)
+              df_names_harmonized <-rename_cols_with_lookup(df = .x,
+                                                            lookup = rename_lookup,lookup_fixed = F)
               df_names_harmonized |> 
                 dplyr::mutate(
                   file_name= .y,
@@ -436,26 +437,6 @@ pre201905_clean_phase_1b <- pre_201905_rbrx_clean1 |>
              
   }
   )
-    
-pre_test <- test |> 
-  purrr::map2_dfr(.y= names(test), ~{
-    print(.y)
-              df_names_harmonized <-rename_cols_with_lookup(df = .x,lookup = rename_lookup,lookup_fixed = F)
-              df_names_harmonized |> 
-                dplyr::mutate(
-                  file_name= .y,
-                  year=str_sub(string = file_name,start = 1,end = 4) |> as.numeric(),
-                  month=str_sub(string = file_name,start = 5,end = 6) |> as.numeric(),
-                  date= lubridate::ymd(glue::glue("{year}-{month}-01"))
-                )
-             
-  }
-  )
-
-pre_test |> 
-  filter(adm2_name=="awi") |> 
-  select(date,everything()) |> 
-  print(n=35)
     
 
 
