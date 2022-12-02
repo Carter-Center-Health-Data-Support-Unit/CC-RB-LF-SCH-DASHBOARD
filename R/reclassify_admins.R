@@ -485,7 +485,8 @@ rename_cols_lookup_add_dates_batch <- function(df_list,colname_lookup,lookup_fix
           file_name= .y,
           year=str_sub(string = file_name,start = 1,end = 4) |> as.numeric(),
           month=str_sub(string = file_name,start = 5,end = 6) |> as.numeric(),
-          date= lubridate::ymd(glue::glue("{year}-{month}-01"))
+          date= lubridate::ymd(glue::glue("{year}-{month}-01")),
+          reporting_level= "admin 2"
         )
 
     }
@@ -534,7 +535,8 @@ bind_rows_add_dates <-  function(df_list){
     dplyr::mutate(
       year=str_sub(string = file_name,start = 1,end = 4) |> as.numeric(),
       month=str_sub(string = file_name,start = 5,end = 6) |> as.numeric(),
-      date= lubridate::ymd(glue::glue("{year}-{month}-01"))
+      date= lubridate::ymd(glue::glue("{year}-{month}-01")),
+      reporting_level= "admin 3"
     ) |>
     dplyr::mutate(
       across(everything(), ~as.character(.x))
