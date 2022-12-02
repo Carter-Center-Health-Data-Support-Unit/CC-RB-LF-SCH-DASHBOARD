@@ -15,176 +15,123 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ```{r libs_data}
 library(tidyverse)
+library(here)
+
+invisible(purrr::map(dir(here("R/"),full.names = T),~source(.x,verbose = FALSE,echo = F)))
 targets::tar_load_everything()
 ```
 
-## Including Plots
-
-You can also embed plots, for example:
-
-```{r pressure, echo=FALSE}
-RB_pre_post_compiled |> 
-  filter(popn_treated_during_current_month>0) |> 
-  ggplot(aes(x = popn_treated_during_current_month, y = adm2_name, fill=adm2_name)) +
-  ggridges::geom_density_ridges(rel_min_height = 0.01, scale=3, alpha = 0.7)+
-  labs(title = "Population treated during current month (density)",
-       )+
-  scale_x_continuous(
-    labels = scales::comma_format(),
-    breaks = c(50000,100000, 150000,500000,1e6, 2e6)
-    )+
-  # geom_vline(xintercept = 150000)+
-  theme_bw()+
-  theme(
-    legend.position = "none",
-    axis.title = element_blank(),
-    axis.text.x = element_text(angle=90)
-  )
-
-```
+## Iterative Cleaning 
+- this might fit better into a different notebook, but i realized there is an issue with the coherence between admin 2 and admin 3 reporting
 
 
+
+alright we have blank NA cols. This is being looked into, in the meantime let's patch it so we can continue
+
+This patch needs to be added to cleaning rmd and then functionalized, then added to `{targets}` pipeline.. for now let's just use the code in place:
 ```{r}
+# the pre 201905 can easily be taken are of by just removing these 2
+# should add this to the `{targets}` cleaning pipeline:
 
-give.n <- function(x){
-  return(c(y = 1.6e6, label = length(x))) 
-  # experiment with the multiplier to find the perfect position
-}
-RB_pre_post_compiled |> 
-  filter(adm2_name=="east_gojam") |> 
-  View()
-
-RB_post201905_df_compiled |> 
-  glimpse()
-
-
-RB_post201905_df_compiled
-RB_pre_post_compiled |> 
-  select(date,adm1_name, adm2_name, adm3_name,everything()) |> 
-  glimpse()
-
-RB_pre_post_compiled |> 
-  ggplot(aes(x=adm2_name,
-             y=popn_treated_during_current_month))+
-  geom_boxplot()+
-  scale_y_continuous(
-    labels = scales::label_number(suffix = " M", scale = 1e-6),
-                breaks = c(
-                           50000,
-                           100000,
-                           200000, 
-                           400000,
-                           800000,
-                           1600000,
-                           5e6)
-    )+
-  stat_summary(fun.data = give.n, geom = "text", fun.y = median,
-                  position = position_dodge(width = 0.75))+
-  coord_flip()+
-  theme_bw()+
-  theme(
-    axis.text.x = element_text(angle = 90),
-    # axis.text.y=element_text(angle = 90),
-    axis.title = element_blank()
-  )
-
-```
-
-
-## Box plot showing 
-```{r}
-avg_pop_reported <- RB_pre_post_compiled |>
-  group_by(adm2_name) |> 
-  summarise(
-    avg_pop_reported = mean(total_popn_census,na.rm=T)
-  )
-
-RB_pre_post_compiled <- RB_pre_post_compiled |> 
-  left_join(avg_pop_reported) |> 
+RB_pre201905_df_compiled <- RB_pre201905_df_compiled |> 
   mutate(
-    reported_higher_than_pop = if_else(popn_treated_during_current_month>avg_pop_reported,"red","black")
-  )
-
-RB_pre_post_compiled |> 
-  ggplot(aes(x=adm2_name,
-             y=popn_treated_during_current_month
-             # boxfill= reported_higher_than_pop
-             ))+
-  geom_boxplot()+
-  scale_y_continuous(
-    labels = scales::label_number(suffix = " M", scale = 1e-6),
-                breaks = c(
-                           50000,
-                           100000,
-                           200000, 
-                           400000,
-                           800000,
-                           1600000,
-                           5e6)
-    )+
-  geom_point(data=avg_pop_reported,
-             aes(x=adm2_name,
-                 y=avg_pop_reported,color="reported census\npopulation"
-                 ))+
-  scale_color_manual(name = "", values = c("reported census\npopulation" = "red")) +
-  coord_flip()+
-  theme_bw()+
-  ggtitle(label = "Distribution of reported values for pop treated in current month by zone")+
-  theme(
-    axis.text.x = element_text(angle = 90),
-    # axis.text.y=element_text(angle = 90),
-    axis.title = element_blank(),
-        legend.position = c(.95, .95),
-    legend.justification = c("right", "top"),
-    legend.box.just = "right",
-    legend.margin = margin(6, 6, 6, 6)
-  )
-
-  
-RB_pre_post_compiled |> 
-  filter(is.na(adm3_name)) |> 
-  group_by(adm1_name,adm2_name, date) |> 
-  count() |> 
-  filter(n>1)
-
-RB_pre_post_compiled |> 
-  mutate(
-    uid=row_number()
+  total_population = if_else(is.na(total_popn_census),total_popn_projected,total_popn_census)  
   ) |> 
-  left_join(avg_pop_reported) |> 
-  filter(popn_treated_during_current_month>=avg_pop_reported) |> 
-  select(uid,date,adm1_name,adm2_name,adm3_name,popn_treated_during_current_month,avg_pop_reported) |> 
-  pivot_longer(popn_treated_during_current_month,names_to = "column",values_to = "reported_value") |> 
-  mutate(new_value=NA,
-         reason_flagged= glue::glue("pop treated ({reported_value})> total pop ({round(avg_pop_reported,0)})"),
-         note=NA) |> 
-  select(-avg_pop_reported ) |> 
-  write_csv("20221116_cleaning_log_example.csv",na = "")
-  mutate(popn_treated_during_current_month_new =NA)
-
-#|> 
-  count(adm1_name, adm2_name,adm3_name, date) |> 
-  arrange(desc(n))
+  filter(!(year==2016 & adm2_name %in% c("west_gojam","east_gojam")))
+  
+# Now for the post data: 
+RB_post201905_df_compiled <- RB_post201905_df_compiled |> 
+  mutate(
+  total_population = if_else(is.na(total_popn_census),total_popn_projected,total_popn_census)  
+  ) |> 
+  select(date,everything()) |>  # bring date to front
+  group_by(adm1_name,adm2_name,adm3_name) |> 
+  arrange(adm3_name,year,month,date) |> 
+  tidyr::fill(total_population,.direction="downup") #first fill from down, then up sequential then reverse.
 
 ```
+
+
+pre 201905 is only reported at admin 2 level - therefore let's summarise and simplify both to adm2
+```{r}
+RB_pre_adm2 <- RB_pre201905_df_compiled |> 
+  summarise_to_adm2()
+
+RB_post_adm2 <- RB_post201905_df_compiled |> 
+  summarise_to_adm2()
+
+RB_adm2 <-  bind_rows(RB_post_adm2,RB_pre_adm2) # combine
+```
+
 
 
 ```{r}
-RB_pre_post_compiled |> 
-  filter(adm2_name=="east_gojam") |> glimpse()
-
-    RB_pre201905_df_ls |>
-      purrr::map_dfr( ~ {
-        .x |>
-          parse_top_table() |>
-          janitor::clean_names() |>
-          standardize_admin_names(data_format = "old") |>
-          drop_summary_rows(data_format = "old") |>
-          sanitize_admins() |>
-          filter(adm2_name=="e_gojjam")
-          # clean_adm2(data_format = data_format)
-
-
-      }
-      ) |> View()
+pop_treated_gt_total_pop<- RB_adm2 |> 
+  filter(
+    popn_treated_during_current_month>total_population
+  )
 ```
+
+We see there are now **`r nrow(pop_treated_gt_total_pop)`** cases where the reported # treated monthly is greater than the total population reported that month.
+
+Let's visually inspect adm2 level monthly reported pop treated vs total population. There are some high outliers? anything to do about these?
+
+```{r}
+rb_boxplot(.data = RB_adm2,
+           x = "adm2_name",
+           y = "popn_treated_during_current_month",
+           pop = "total_population" )
+
+
+# log scaled
+rb_boxplot(.data = RB_adm2,
+           x = "adm2_name",
+           y = "popn_treated_during_current_month",
+           pop = "total_population" ,log = T)
+
+
+
+```
+
+Shold fin out a bit more about cumulative all_rounds
+```{r}
+RB_adm2 |> 
+  filter(
+    popn_treated_cumulative_all_rounds>total_population
+  )
+
+RB_adm2$popn_treated_cumulative_all_rounds
+rb_boxplot(.data = RB_adm2,
+           x = "adm2_name",
+           y = "popn_treated_cumulative_all_rounds",
+           pop = "total_population" )
+```
+
+
+Now let's do the same just at the woreda (adm3/district level). We only have woreda level reporting for post 2019-05 data.
+```{r}
+pop_treated_gt_total_pop_adm3<- RB_post201905_df_compiled |> 
+  filter(
+    popn_treated_during_current_month>total_population
+  )
+
+pop_treated_gt_total_pop_adm3 |> count(date, adm3_name)
+```
+We see there are now **`r nrow(pop_treated_gt_total_pop_adm3)`** cases where the reported # treated monthly is greater than the total population reported that month.
+
+```{r}
+rb_boxplot(.data = RB_post201905_df_compiled,
+           x = "adm3_name",
+           y = "popn_treated_during_current_month",
+           facet = "adm1_name",
+           pop = "total_population" )
+
+
+ # log scaled
+rb_boxplot(.data = RB_adm2,
+           x = "adm2_name",
+           y = "popn_treated_during_current_month",
+           pop = "total_population" ,log = T)
+
+```
+
