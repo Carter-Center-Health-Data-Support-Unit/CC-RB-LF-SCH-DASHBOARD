@@ -1,5 +1,5 @@
 
-summarise_to_adm2 <- function(df=RB_post201905_df_compiled,
+summarise_to_adm2 <- function(df=RB_post201905_df_compiled
 
 ){
     sum_cols = c(
@@ -14,7 +14,9 @@ summarise_to_adm2 <- function(df=RB_post201905_df_compiled,
       "villages_treated_during_current_month",
       "villages_treated_round_1",
       "villages_treated_round_2",
-      "total_popn_census")
+      "total_popn_census",
+      "total_population"
+      )
     pct_cols = c("percent_utg_treated_round_1",
                  "percent_utg_2_treated_all_rounds",
                  "percent_popn_treated_round_1",
