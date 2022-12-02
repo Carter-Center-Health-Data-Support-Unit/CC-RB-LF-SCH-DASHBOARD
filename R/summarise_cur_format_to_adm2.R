@@ -1,5 +1,5 @@
 
-summarise_post201905_adm2 <- function(df=RB_post201905_df_compiled,
+summarise_cur_format_to_adm2 <- function(df=RB_post201905_df_compiled,
                                       sum_cols = c(
                                                    "popn_treated_during_current_month",
                                                    "utg_treatment_target_for_each_round",
@@ -30,6 +30,5 @@ summarise_post201905_adm2 <- function(df=RB_post201905_df_compiled,
 
 
 }
-RB_post201905_df_compiled |> select(total_popn_census)
-RB_post201905_df_compiled$siz_cross_border_yes_no|> janitor::tabyl()
-  as_tibble()
+
+
