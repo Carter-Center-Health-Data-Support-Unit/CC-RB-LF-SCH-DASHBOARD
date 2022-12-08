@@ -47,7 +47,14 @@ First we have some convenience functions to compile the data sets and extract ad
 root_dir <- Sys.getenv("CC_RB_LF_SCH_MONTHLY")
 data_dir <- glue::glue("{root_dir}/ETH/data_raw/")
 
-dataset_list <- compile_tab(folder_path = data_dir,which_tabs = "RB_rx")
+# lfrx_sheet <- dir(data_dir,full.names = T) |> 
+#   purrr::map(~readxl::excel_sheets(.x))
+# 
+# lfrx_sheet <- dir(data_dir,full.names = T) |> 
+#   purrr::map(~readxl::excel_sheets(.x)_ |> 
+#                purrr::keep(~str_detect(.x,"annual")))
+# 
+dataset_list <- compile_tab(folder_path = data_dir,which_tabs = "LF_rx")
 ```
 
 Next we will load and compile all the admin columns from the raw data catalog This is done with the `load_admins_from_raw` function. **Note:** The final data pipeline will likely change, but these steps are used to create our administrative name harmonization database/lookup.
@@ -60,7 +67,7 @@ admins_raw <- dataset_list |>
   purrr::map_dfr(~load_admins_from_raw(.x))
 
 # load ocha endoresed admin boundaries 
-master_adm<- read_rds(here("data/eth_adm_master"))
+master_adm <- read_rds(here("data/eth_adm_master.rds"))
 ```
 
 We want to sanitize admin names (i.e tolower case, trimws, remove characters/symbols), but first we need to fix a data entry/quality issue. When there was just one `admin 3` being reported in a specific `admin 2` the staff entering the data often wrote `1` into `admin 3` and in the `admin 2` column they wrote the `admin 2 - admin 3`. Therefore we will fix that here - we can turn this into a function later - for now just run this chunk
