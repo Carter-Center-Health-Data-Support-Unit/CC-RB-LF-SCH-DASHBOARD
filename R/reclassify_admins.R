@@ -172,15 +172,7 @@ clean_adm2 <-  function(df,data_format="current"){
           adm2_name == "west_harerge"~"west_hararge",
           adm2_name == "west_harerge"~"west_hararge",
           adm2_name =="refugges_gambella"~"refugees" ,# this is how it's reclassified in "new", but not sure if should add gambella tag here since we don't have adm1...
-
           TRUE ~ adm2_name
-
-
-
-
-
-
-
         )
       )
   }
@@ -487,7 +479,9 @@ rename_cols_lookup_add_dates_batch <- function(df_list,colname_lookup,lookup_fix
           month=str_sub(string = file_name,start = 5,end = 6) |> as.numeric(),
           date= lubridate::ymd(glue::glue("{year}-{month}-01")),
           reporting_level= "admin 2"
-        )
+        ) |>
+        dplyr::filter(!(year==2016 & adm2_name %in% c("west_gojam","east_gojam")))
+
 
     }
     )
@@ -527,11 +521,16 @@ join_master_admin_to_pre201905_data <- function(df_list, master_adm){
     )
 
 }
-
+# standard_pop_col <- function(df){
+#   df |>
+#     dplyr::mutate(
+#       total_population= dplyr::if_else(is.na(total_popn_census),total_popn_projected,total_popn_census)
+#     )
+# }
 
 # for current data
-bind_rows_add_dates <-  function(df_list){
-  dplyr::bind_rows(df_list) |>
+bind_rows_add_dates_fill_pop <-  function(df_list, data_format= "current"){
+  w_dates <- dplyr::bind_rows(df_list) |>
     dplyr::mutate(
       year=str_sub(string = file_name,start = 1,end = 4) |> as.numeric(),
       month=str_sub(string = file_name,start = 5,end = 6) |> as.numeric(),
@@ -543,10 +542,25 @@ bind_rows_add_dates <-  function(df_list){
     ) |>
     readr::type_convert( ) |>
     dplyr::mutate(
-      active_villages_for_the_year =as.numeric(active_villages_for_the_year)
-    )
+      active_villages_for_the_year =as.numeric(active_villages_for_the_year),
+      total_population= dplyr::if_else(is.na(total_popn_census),total_popn_projected,total_popn_census)
+    ) |>
+    dplyr::select(date,everything())
 
+  # this section is meant to fill in population value that dont make sense
+  # this is mostly taken care of w `filter` for old format data in `rename_cols_lookup_add_dates_batch`, new data needs a litle more help
+  if(data_format=="old"){
+    res <- w_dates
+  }
 
+  if(data_format=="current"){
+    res <- w_dates |>
+      dplyr::group_by(adm1_name,adm2_name,adm3_name) |>
+      dplyr::arrange(adm3_name,year,month,date) |>
+      tidyr::fill(total_population,.direction="downup") |>
+      dplyr::ungroup()
+  }
+  return(res)
 }
 
 

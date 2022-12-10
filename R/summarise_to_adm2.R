@@ -32,6 +32,9 @@ summarise_to_adm2 <- function(df=RB_post201905_df_compiled
       across(.cols = dplyr::any_of(sum_cols),.fns = ~sum(.x,na.rm = T)),
       across(.cols= dplyr::any_of(pct_cols),.fns = ~mean(.x,na.rm=T)),
       .groups = "drop"
+    ) |>
+    dplyr::mutate(
+      reporting_level= "admin 2"
     )
 
 }

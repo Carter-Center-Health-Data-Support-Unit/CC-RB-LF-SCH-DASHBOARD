@@ -33,12 +33,18 @@ This patch needs to be added to cleaning rmd and then functionalized, then added
 # the pre 201905 can easily be taken are of by just removing these 2
 # should add this to the `{targets}` cleaning pipeline:
 
+
+
+
 RB_pre201905_df_compiled <- RB_pre201905_df_compiled |> 
   mutate(
   total_population = if_else(is.na(total_popn_census),total_popn_projected,total_popn_census)  
   ) |> 
   filter(!(year==2016 & adm2_name %in% c("west_gojam","east_gojam")))
   
+
+
+
 # Now for the post data: 
 RB_post201905_df_compiled <- RB_post201905_df_compiled |> 
   mutate(
@@ -70,6 +76,11 @@ pop_treated_gt_total_pop<- RB_adm2 |>
   filter(
     popn_treated_during_current_month>total_population
   )
+
+test <- RB_pre_post_compiled|> 
+  filter(
+    popn_treated_during_current_month>total_population
+  )
 ```
 
 We see there are now **`r nrow(pop_treated_gt_total_pop)`** cases where the reported # treated monthly is greater than the total population reported that month.
@@ -78,6 +89,25 @@ Let's visually inspect adm2 level monthly reported pop treated vs total populati
 
 ```{r}
 rb_boxplot(.data = RB_adm2,
+           x = "adm2_name",
+           y = "popn_treated_during_current_month",
+           pop = "total_population" )
+RB_adm2<-RB_adm2 |> 
+  arrange(date)
+RB_adm2 |> 
+  filter(is.na(total_population))
+
+RB_adm2_targets <-  RB_pre_post_compiled |>
+  arrange(date)
+
+RB_adm2_targets |> 
+  filter(is.na(total_population)) |> 
+  count(file_name ) |> 
+  print(n=35)
+
+ all(RB_adm2$total_population==RB_adm2_targets$total_population)
+
+rb_boxplot(.data = RB_pre_post_compiled,
            x = "adm2_name",
            y = "popn_treated_during_current_month",
            pop = "total_population" )

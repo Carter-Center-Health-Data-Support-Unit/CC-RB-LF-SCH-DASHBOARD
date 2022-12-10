@@ -15,10 +15,9 @@ compile_tab <-  function(folder_path, which_tabs = c("RB_rx"), skip=1){
   if(which_tabs=="RB_rx"){
     sel_tabs <- "^RB Rx_Bi-annual$|^RB Rx$"
   }
-  if(which_tabs=="LF_rx"){
+  else if(which_tabs=="LF_rx"){
     sel_tabs <- "^LF Rx$"
-  }
-  else{
+  }else{
     sel_tabs<- which_tabs
   }
   file_names_short<-dir(data_dir,full.names = F)
