@@ -92,20 +92,8 @@ rb_boxplot(.data = RB_adm2,
            x = "adm2_name",
            y = "popn_treated_during_current_month",
            pop = "total_population" )
-RB_adm2<-RB_adm2 |> 
-  arrange(date)
-RB_adm2 |> 
-  filter(is.na(total_population))
 
-RB_adm2_targets <-  RB_pre_post_compiled |>
-  arrange(date)
 
-RB_adm2_targets |> 
-  filter(is.na(total_population)) |> 
-  count(file_name ) |> 
-  print(n=35)
-
- all(RB_adm2$total_population==RB_adm2_targets$total_population)
 
 rb_boxplot(.data = RB_pre_post_compiled,
            x = "adm2_name",

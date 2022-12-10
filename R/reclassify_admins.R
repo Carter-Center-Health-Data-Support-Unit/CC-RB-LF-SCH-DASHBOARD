@@ -467,11 +467,12 @@ extract_pre_clean_names_adms_batch <- function(df_list,data_format= "current"){
 
 
 rename_cols_lookup_add_dates_batch <- function(df_list,colname_lookup,lookup_fixed=T){
-  df_list |>
+  df_prepped <- df_list |>
     purrr::map2_dfr(.y= names(df_list), ~{
       print(.y)
       df_names_harmonized <-rename_cols_with_lookup(df = .x,
-                                                    lookup = colname_lookup,lookup_fixed = lookup_fixed)
+                                                    lookup = colname_lookup,
+                                                    lookup_fixed = lookup_fixed)
       df_names_harmonized |>
         dplyr::mutate(
           file_name= .y,
@@ -479,12 +480,15 @@ rename_cols_lookup_add_dates_batch <- function(df_list,colname_lookup,lookup_fix
           month=str_sub(string = file_name,start = 5,end = 6) |> as.numeric(),
           date= lubridate::ymd(glue::glue("{year}-{month}-01")),
           reporting_level= "admin 2"
-        ) |>
-        dplyr::filter(!(year==2016 & adm2_name %in% c("west_gojam","east_gojam")))
-
+        )
 
     }
     )
+  df_prepped |>
+    dplyr::mutate(
+      total_population= dplyr::if_else(is.na(total_popn_census),total_popn_projected,total_popn_census)
+    ) |>
+    dplyr::filter(!(year==2016 & adm2_name %in% c("west_gojam","east_gojam")))
 
 }
 
