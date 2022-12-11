@@ -20,7 +20,7 @@ sep_adm_2_3 <-  function(df){
   df |>
     separate(col = adm2_name,into = c("adm2_rev","adm3_rev"),sep = "-") |>
     mutate(adm3_f= if_else(!is.na(adm3_rev),adm3_rev, adm3_name),.after="adm2_rev") |>
-    filter(!adm3_f %in% as.character(c(1:1000))) |>
+    filter(!adm3_f %in% as.character(c(0:1000))) |>
     select(-adm3_name,-adm3_rev) |>
     dplyr::rename(
       adm2_name="adm2_rev",
