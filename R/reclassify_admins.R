@@ -76,7 +76,7 @@ clean_adm1 <-  function(df){
         adm1_name == "ben_gumuz"~"benishangul_gumz",
         adm1_name == "gambella"~"gambela" ,
         adm1_name == "snnpr"~"snnp", #snnp used to match HDX file
-        adm1_name == "swe"~"south_west_ethiopia",
+        adm1_name %in% c("s_we","swe")~"south_west_ethiopia",
         TRUE~ adm1_name
       )
     )
