@@ -60,7 +60,7 @@ admins_raw <- dataset_list |>
   purrr::map_dfr(~load_admins_from_raw(.x))
 
 # load ocha endoresed admin boundaries 
-master_adm<- read_rds(here("data/eth_adm_master"))
+master_adm<- read_rds(here("data/eth_adm_master.rds"))
 ```
 
 We want to sanitize admin names (i.e tolower case, trimws, remove characters/symbols), but first we need to fix a data entry/quality issue. When there was just one `admin 3` being reported in a specific `admin 2` the staff entering the data often wrote `1` into `admin 3` and in the `admin 2` column they wrote the `admin 2 - admin 3`. Therefore we will fix that here - we can turn this into a function later - for now just run this chunk
@@ -443,6 +443,47 @@ pre201905_clean_phase_1b <- pre_201905_rbrx_clean1 |>
 ```
 
 
+Create new `total_population` cols so we can forget about incomplete others. Also told that 2016 west & east gojam can be disregarded... figured this step in the `data_quality_viz.Rmd` step, then fit it it into `{targets}` pipeline, now adding it here.
+```{r}
+
+pre201905_clean_phase_1b <- pre201905_clean_phase_1b |> 
+  mutate(
+  total_population = if_else(is.na(total_popn_census),total_popn_projected,total_popn_census)  
+  ) |> 
+  filter(!(year==2016 & adm2_name %in% c("west_gojam","east_gojam")))
+
+
+# # Now for the post data: 
+# RB_post201905_df_compiled <- RB_post201905_df_compiled |> 
+#   mutate(
+#   total_population = if_else(is.na(total_popn_census),total_popn_projected,total_popn_census)  
+#   ) |> 
+#   select(date,everything()) |>  # bring date to front
+#   group_by(adm1_name,adm2_name,adm3_name) |> 
+#   arrange(adm3_name,year,month,date) |> 
+#   tidyr::fill(total_population,.direction="downup") #first fill from down, then up sequential then reverse.
+# # cleaned_compiled_phase_1c |> 
+# #   # pull(active_villages_for_the_year)
+# #   filter(as.numeric(active_villages_for_the_year)>2000) |> 
+# #   glimpse()
+# pre201905_clean_phase_1b |> 
+  # filter(is.na(adm1_en))
+```
+
+
+```{r}
+
+pre_post_compiled <- bind_rows(pre201905_clean_phase_1b,cleaned_compiled_phase_1c)
+pre_post_compiled |> 
+  glimpse()
+
+
+pre_post_compiled$total_popn_projected
+
+```
+
+
+
 
 ## Select relevant/critical variables
 
@@ -558,21 +599,10 @@ cleaned_compiled_phase_1c <- cleaned_compiled_phase_1b |>
     active_villages_for_the_year =as.numeric(active_villages_for_the_year)
   )
   
-
-# cleaned_compiled_phase_1c |> 
-#   # pull(active_villages_for_the_year)
-#   filter(as.numeric(active_villages_for_the_year)>2000) |> 
-#   glimpse()
-pre201905_clean_phase_1b |> 
-  filter(is.na(adm1_en))
-pre_post_compiled <- bind_rows(pre201905_clean_phase_1b,cleaned_compiled_phase_1c)
-pre_post_compiled |> 
-  glimpse()
-
-
-pre_post_compiled$total_popn_projected
-
 ```
+
+
+
 
 
 # time to visually inspect for cleaning
