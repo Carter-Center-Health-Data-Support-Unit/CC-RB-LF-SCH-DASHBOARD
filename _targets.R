@@ -59,7 +59,7 @@ list(
     readxl::read_xlsx(here::here("colname_harmonization_lookup.xlsx"))
              ),
 
-  # Clean New Phase 2 Data ------------------------------------------------------
+  # Clean RB New Phase 2 Data ------------------------------------------------------
   # initial cleaning. First do for current format data
   # grab top table, clean admin names, drop summary rows
   tar_target(
@@ -109,8 +109,10 @@ list(
 
   ### basically finished chunk ending 381
 
-# PHASE 2 - Current -------------------------------------------------------
 
+  # LF Rx: Clean  New Phase 2 Data ------------------------------------------------------
+  # initial cleaning. First do for current format data
+  # grab top table, clean admin names, drop summary rows
 
   tar_target(LFrx_post201905_df_ls,
              compile_tab(folder_path = data_dir,which_tabs = "LF_rx")

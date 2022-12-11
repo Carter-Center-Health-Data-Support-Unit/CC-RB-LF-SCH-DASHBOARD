@@ -19,28 +19,7 @@ invisible(purrr::map(dir(here("R/"),full.names = T),~source(.x,verbose = FALSE,e
 ```
 
 ## Intro
-
-The purpose of this notebook is to document the data cleaning process. This documents walks through the data cleaning process and function generation. As concepts are turned into generic functions they are  added to the `R` directory. The actual data cleaning will take place with just a few functions chained together in a separate notebook, but this will serve as a good reference to how and which analytic data cleaning decisions were made
-
-Here we outline several cleaning steps:
-
-1. Compile the raw data catalog
-2. Clean raw data to make clean data catalogue
-  a. Read/extract/compile "relevant" tables from raw data
-  b. Harmonize administrative names to master list
-  c. Select relevant/critical variables from each table
-
-## Compile the raw data catalogue
-
-This step has been completed. The functions to do this are in the `R/` folder. I will either add the code documentation here or create a separate notbook for this process (*TODO*).
-
-## Name Harmonization
-
-Perhaps the most cumbersome step of the cleaning will be to harmonize all the administrative names used during data collection to a master list. I recommend using the administrative boundaries files endorsed by OCHA which can be downloaded [here](https://data.humdata.org/dataset/cod-ab-eth).
-
-This step requires feedback from other team members and should be considered the **main initial data cleaning priority**. Therefore, I have set up a pipeline and created some tools to facilitate the cleaning of names.
-
-First we have some convenience functions to compile the data sets and extract admin names. Note you will need to create an `system environment variable` that holds the entire path to the directory  `Country Monthly Reports` directory of the onedrive. Once this environment is stored you can run the following chunk to load all the "RB_rx" tabs. By harmonizing all the names in this tab, we will essentially be creating a admin name dictionary/lookup table that can be used to reclassify admin names in other tabs.
+The `{targets}` pipeline has been set up to clean `RB rx` data and it should be quite similar for `LF rx` data. Therefore, there is no need to re-document all the cleaning steps in this doc. Rather, it makes sense to run the `{targets}` pipeline with th `LF rx` data and use this document to check the outputs, if any additional functions are needed they can be produced and explained out of this document
 
 
 ```{r load_data}
@@ -81,6 +60,35 @@ admins_c1 <- admins_raw |>
   filter(!adm3_f %in% as.character(c(1:1000))) |> 
   select(adm1_name, adm2_name = adm2_rev, adm3_name= adm3_f)
 ```
+
+Can we jump straight to:
+
+```{r}
+
+cleaned_phase1 <- dataset_list |> 
+  purrr::map2(.y = names(dataset_list),
+  ~ {
+   .x |> 
+    dplyr::mutate(
+      file_name = .y
+    ) |> 
+      parse_top_table() |> 
+      clean_names_and_admins(data_format = "current")
+  }
+)
+
+
+column_name_freq_table <- cleaned_phase1 |> 
+  purrr::map_dfr(
+    ~data.frame(col_names= colnames(.x))  
+  ) |> 
+  count(col_names)
+
+```
+
+
+
+
 
 ### Fix Admin 1
 
