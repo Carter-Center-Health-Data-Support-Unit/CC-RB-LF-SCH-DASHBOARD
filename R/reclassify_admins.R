@@ -83,6 +83,25 @@ clean_adm1 <-  function(df){
 
 }
 
+clean_metekel_dam_worker <-  function(df){
+  df |>
+    dplyr::mutate(
+      adm_1_2_3=  glue::glue("{adm1_name}-{adm2_name}-{adm3_name}"),
+      adm1_name = dplyr::case_when(
+        stringr::str_detect(adm_1_2_3, "dam-work|dam_work")~"benishangul_gumz",
+        TRUE~adm1_name
+      ),
+      adm2_name = dplyr::case_when(
+        stringr::str_detect(adm_1_2_3,"dam-work|dam_work")~"metekel",
+        TRUE~adm2_name
+      ),
+      adm3_name = dplyr::case_when(
+        stringr::str_detect(adm_1_2_3, "dam-work|dam_work")~"dam_workers",
+        TRUE~adm3_name
+      ),
+      adm_1_2_3=  glue::glue("{adm1_name}-{adm2_name}-{adm3_name}")
+    )
+}
 
 #' Title
 #'
@@ -92,8 +111,10 @@ clean_adm1 <-  function(df){
 #' @export
 #'
 #' @examples
+
 clean_admins_lfrx_patch <- function(df){
   df |>
+    clean_metekel_dam_worker() |>
     dplyr::mutate(
       adm_1_2_3=  glue::glue("{adm1_name}-{adm2_name}-{adm3_name}"),
       adm1_name =
@@ -102,10 +123,6 @@ clean_admins_lfrx_patch <- function(df){
           adm1_name %in% c("gambela","amahara","amhara") & adm2_name %in% c("metekel","dam_workers_metekel")~"benishangul_gumz",
           TRUE ~ adm1_name
         ),
-      adm_1_2_3=  glue::glue("{adm1_name}-{adm2_name}-{adm3_name}"),
-      adm2_name = case_when(
-        adm_1_2_3=="benishangul_gumz-dam_workers_metekel-dam_workers"~"metekel",
-        TRUE~adm2_name),
       adm_1_2_3=  glue::glue("{adm1_name}-{adm2_name}-{adm3_name}"),
 
       adm3_name =
