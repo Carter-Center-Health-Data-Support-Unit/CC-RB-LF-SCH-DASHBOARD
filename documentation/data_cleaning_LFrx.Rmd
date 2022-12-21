@@ -16,77 +16,104 @@ library(here)
 library(janitor)
 # source custom functions in R  folder
 invisible(purrr::map(dir(here("R/"),full.names = T),~source(.x,verbose = FALSE,echo = F)))
+targets::tar_load_everything()
 ```
 
 ## Intro
 The `{targets}` pipeline has been set up to clean `RB rx` data and it should be quite similar for `LF rx` data. Therefore, there is no need to re-document all the cleaning steps in this doc. Rather, it makes sense to run the `{targets}` pipeline with th `LF rx` data and use this document to check the outputs, if any additional functions are needed they can be produced and explained out of this document
 
 
-```{r load_data}
-root_dir <- Sys.getenv("CC_RB_LF_SCH_MONTHLY")
-data_dir <- glue::glue("{root_dir}/ETH/data_raw/")
+Name harmonization: all admin1 good
+```{r}
+check_admin1(df = LFrx_post201905_df_compiled,df_master = eth_master_adm)
+```
 
-# lfrx_sheet <- dir(data_dir,full.names = T) |> 
-#   purrr::map(~readxl::excel_sheets(.x))
+
+On first run when we used name harmonization created for LB rx data, there were some new lookup pairs needed. Put together this patch and raised a GH issue. Could consider integrating into larger `case_when()` or keeping as function
+```{r}
+
+# clean_admins_lfrx_patch <- function(df){
+#   df |> 
+#     dplyr::mutate(
+#       adm1_name = 
+#         dplyr::case_when(
+#           adm1_name == "south_west_ethiopia" & adm2_name== "south_omo"~"snnp",
+#           adm1_name %in% c("gambela","amahara","amhara") & adm2_name %in% c("metekel","dam_workers_metekel")~"benishangul_gumz",
+#           TRUE ~ adm1_name
+#         ),
+#       adm3_name = 
+#         dplyr::case_when(
+#           # snnp-gofa-mekeloza  ~ ?
+#           "snnp-gofa-melogada"~ "melo_gada"
+#           "snnp-south_omo-baka_dawula_ari"~"boko_dawula",
+#           "snnp-south_omo-bena_tse_june " ~"bena_tsemay",
+#           "oromia-ilu_aba_bora-alge_sache "~"alge_sachi",
+#           "oromia-ilu_aba_bora-boilo_nopa"~ "bilo_nopha",
+#           "amhara-south_gondar-muja" ~ "sede_muja"
 # 
-# lfrx_sheet <- dir(data_dir,full.names = T) |> 
-#   purrr::map(~readxl::excel_sheets(.x)_ |> 
-#                purrr::keep(~str_detect(.x,"annual")))
-# 
-dataset_list <- compile_tab(folder_path = data_dir,which_tabs = "LF_rx")
+#         )
+#       
+#     )
+# }
 ```
 
-Next we will load and compile all the admin columns from the raw data catalog This is done with the `load_admins_from_raw` function. **Note:** The final data pipeline will likely change, but these steps are used to create our administrative name harmonization database/lookup.
 
+```{r}
+check_admin2(df = LFrx_post201905_df_compiled,
+             df_master = eth_master_adm) |> 
+  print(n=89)
 
-
-```{r load_admins}
-# load admin columns
-admins_raw <- dataset_list |>
-  purrr::map_dfr(~load_admins_from_raw(.x))
-
-# load ocha endoresed admin boundaries 
-master_adm <- read_rds(here("data/eth_adm_master.rds"))
 ```
 
-We want to sanitize admin names (i.e tolower case, trimws, remove characters/symbols), but first we need to fix a data entry/quality issue. When there was just one `admin 3` being reported in a specific `admin 2` the staff entering the data often wrote `1` into `admin 3` and in the `admin 2` column they wrote the `admin 2 - admin 3`. Therefore we will fix that here - we can turn this into a function later - for now just run this chunk
-
-
-```{r fix_entry_error1}
-# before sanitzing lets set adm 3 properly (when admin 2/3 sometimes combined in adm2)
-admins_c1 <- admins_raw |> 
-  separate(col = adm2_name,into = c("adm2_rev","adm3_rev"),sep = "-") |> 
-  mutate(adm3_f= if_else(!is.na(adm3_rev),adm3_rev, adm3_name)) |> 
-  filter(!adm3_f %in% as.character(c(1:1000))) |> 
-  select(adm1_name, adm2_name = adm2_rev, adm3_name= adm3_f)
-```
-
-Can we jump straight to:
+mostly dam_workers and refugee classificatoins which are not in official eth master admin... let's focus on others first
 
 ```{r}
 
-cleaned_phase1 <- dataset_list |> 
-  purrr::map2(.y = names(dataset_list),
-  ~ {
-   .x |> 
-    dplyr::mutate(
-      file_name = .y
-    ) |> 
-      parse_top_table() |> 
-      clean_names_and_admins(data_format = "current")
-  }
-)
+#half worked
+check_admin3(df = LFrx_post201905_df_compiled,
+             df_master = eth_master_adm) 
 
 
-column_name_freq_table <- cleaned_phase1 |> 
-  purrr::map_dfr(
-    ~data.frame(col_names= colnames(.x))  
-  ) |> 
-  count(col_names)
+RB_post201905_adm3 |> 
+  filter(str_detect(adm_1_2_3,"dam_work"))
+
+"benishangul_gumz-dam_workers_metekel-dam_workers"~"dam_workers"
+"dam_workers_metekel"~"metekel"
+
+
+# snnp-gofa-mekeloza  ~ snnp-gofa-melekoza
+# "snnp-gofa-melogada"~ "snnp-gofa-melo_gada"
+# "snnp-south_omo-baka_dawula_ari"~"snnp-south_omo-boko_dawula",
+# "snnp-south_omo-bena_tse_june " ~"snnp-south_omo-bena_tsemay",
+# "oromia-ilu_aba_bora-alge_sache "~"oromia-ilu_aba_bora-alge_sachi",
+# "oromia-ilu_aba_bora-boilo_nopa"~" oromia-ilu_aba_bora-bilo_nopha",
+# "amhara-south_gondar-muja" ~ "amhara-south_gondar-sede_muja"
+# "snnp-south_omo-selamego "~"snnp-south_omo-salamago"
+
+clean_adm2()
+eth_master_adm |> 
+  filter(str_detect(adm1_en,"amhara")) |> count(adm2_en)
+eth_master_adm |> 
+  filter(str_detect(adm2_en,"south_omo")) |> 
+  count(adm_1_2_3)
+
+RB_post201905_adm3 |> 
+  filter(str_detect(adm3_name,"sout_omo")) |> 
+  count(adm1_name)
+
+
+LFrx_post201905_df_compiled |> 
+  filter(str_detect(adm2_name,"metekel")) |> 
+  count(adm1_name,adm2_name, adm3_name)
+
+
+LFrx_post201905_df_compiled |> 
+  clean_adm2_lfrx_patch() |> 
+  filter(str_detect(adm2_name,"metekel")) |> 
+  count(adm1_name,adm2_name, adm3_name)
+
 
 ```
-
-
 
 
 
