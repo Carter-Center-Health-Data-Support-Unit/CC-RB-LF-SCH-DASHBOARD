@@ -135,6 +135,8 @@ list(
 
 tar_target(LFrx_pre201905_df_ls,
            compile_tab(folder_path = data_dir,
+                       # should improve regex handling so i don't have to write escape
+                       # characters for this tab
                        which_tabs = "Active TX \\(LF_TX\\)",
                        skip = 2 )
 ),
