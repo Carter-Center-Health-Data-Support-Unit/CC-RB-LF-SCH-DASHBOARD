@@ -107,7 +107,7 @@ list(
   ),
 
 
-  ### basically finished chunk ending 381
+  ### basically finished RB_Data_cleaninig chunk ending 381
 
 
   # LF Rx: Clean  New Phase 2 Data ------------------------------------------------------
@@ -122,9 +122,52 @@ list(
     command = extract_pre_clean_names_adms_batch(df_list =LFrx_post201905_df_ls,data_format = "current" )
   ),
   tar_target(
-    name = LFrx_post201905_df_compiled,
+    name = LFrx_post201905_adm3,
     command = bind_rows_add_dates_fill_pop(df_list =LFrx_post201905_df_ls_clean1)
-  )
+  ),
+  tar_target(
+    name = LFrx_post201905_adm2,
+    command= summarise_to_adm2(LFrx_post201905_adm3)
+  ),
+
+# LF PRE data -------------------------------------------------------------
+
+tar_target(LFrx_pre201905_df_ls,
+           compile_tab(folder_path = data_dir,
+                       which_tabs = "Active TX \\(LF_TX\\)",
+                       skip = 2 )
+),
+
+
+# LFrx PRE Phase 1 Data --------------------------------------------------
+tar_target(
+  name = LFrx_pre201905_df_ls_clean1a,
+  command = extract_pre_clean_names_adms_batch(df_list =LFrx_pre201905_df_ls,
+                                               data_format = "old" )
+),
+# old format data only has admin 2 so need to join other admins based on master
+tar_target(
+  name = LFrx_pre201905_df_ls_clean1b,
+  command = join_master_admin_to_pre201905_data(df_list =LFrx_pre201905_df_ls_clean1a,
+                                                master_adm = eth_master_adm )
+),
+# secondary cleaning first old, then new.
+tar_target(
+  name = LFrx_pre201905_df_compiled,
+  command = rename_cols_lookup_add_dates_batch(df_list =LFrx_pre201905_df_ls_clean1b,
+                                               colname_lookup = RB_colname_harmonize_lookup,
+                                               lookup_fixed = F)
+),
+# check implications of this, but i think just smoothes out cleans up some poential duplicate issues?
+tar_target(
+  name = LFrx_pre201905_adm2,
+  command= summarise_to_adm2(LFrx_pre201905_df_compiled)
+),
+
+tar_target(
+  name = LFrx_pre_post_compiled,
+  command = dplyr::bind_rows(LFrx_pre201905_adm2,LFrx_post201905_adm2)
+)
 
 
 

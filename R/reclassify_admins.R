@@ -452,7 +452,8 @@ drop_summary_rows <-  function(df,data_format="current"){
         !str_detect(adm2_name,"^[Tt]otal"),
         !str_detect(adm2_name,"^note"),
         !str_detect(adm2_name,"^treatment"),
-        !str_detect(adm2_name,"^7_kebeles_in_surma_district_of_bench_maji_zone*")
+        !str_detect(adm2_name,"7_kebeles_in_surma_district_of_bench_maji_zone*"),
+        !str_detect(adm2_name,"x7kebeles_in_surma_district_of_bench_maji_zone_were_not_inclu")
         )
 
   }
