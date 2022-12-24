@@ -29,8 +29,7 @@ data_dir <- glue::glue("{root_dir}/ETH/data_raw/")
 # Replace the target list below with your own:
 
 list(
-
-  # Loading Data/Inputs ------------------------------------------------------------
+  # Load/track Inputs ------------------------------------------------------------
   # compile current format RB rx tabs into list of dfs
   tar_target(RB_post201905_df_ls,
              compile_tab(folder_path = data_dir,which_tabs = "RB_rx")
@@ -59,7 +58,7 @@ list(
     readxl::read_xlsx(here::here("colname_harmonization_lookup.xlsx"))
              ),
 
-  # Clean RB New Phase 2 Data ------------------------------------------------------
+  # Clean RB (Post) ------------------------------------------------------
   # initial cleaning. First do for current format data
   # grab top table, clean admin names, drop summary rows
   tar_target(
@@ -76,7 +75,8 @@ list(
     command= summarise_to_adm2(RB_post201905_adm3)
   ),
 
-  # Clean Old Phase 1 Data --------------------------------------------------
+  # Clean RB (Pre) --------------------------------------------------
+  # initial cleaning
   tar_target(
     name = RB_pre201905_df_ls_clean1a,
     command = extract_pre_clean_names_adms_batch(df_list =RB_pre201905_df_ls,
@@ -88,19 +88,20 @@ list(
     command = join_master_admin_to_pre201905_data(df_list =RB_pre201905_df_ls_clean1a,
                                                   master_adm = eth_master_adm )
   ),
-  # secondary cleaning first old, then new.
+  # Harmonize "pre" column names with lookup table (after this they will match "post")
   tar_target(
     name = RB_pre201905_df_compiled,
       command = rename_cols_lookup_add_dates_batch(df_list =RB_pre201905_df_ls_clean1b,
                                                    colname_lookup = RB_colname_harmonize_lookup,
                                                    lookup_fixed = F)
   ),
-  # check implications of this, but i think just smoothes out cleans up some poential duplicate issues?
+  # check implications of this, but i think just smoothes out/cleans up some potential duplicate issues?
   tar_target(
     name = RB_pre201905_adm2,
     command= summarise_to_adm2(RB_pre201905_df_compiled)
   ),
 
+# RB Merge Pre & Post -----------------------------------------------------
   tar_target(
     name = RB_pre_post_compiled,
       command = dplyr::bind_rows(RB_pre201905_adm2,RB_post201905_adm2)
