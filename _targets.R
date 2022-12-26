@@ -172,6 +172,9 @@ tar_target(
   command = dplyr::bind_rows(LFrx_pre201905_adm2,LFrx_post201905_adm2)
 )
 
-
-
 )
+
+# tar_invalidate(RB_post201905_adm3)
+# tar_prune()
+# tar_make()
+# tar_load_everything()
