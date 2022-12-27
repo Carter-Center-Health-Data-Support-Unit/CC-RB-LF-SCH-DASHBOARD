@@ -63,7 +63,7 @@ input[type="number"] {
 ################### done ##################################################################
 
 
-body, label, input, button, select, .legend { 
+body, label, input, button, select, .legend {
     font-family: "Arial Narrow";
     /*font-family: 'Arial', Arial;*/
     font-weight: 200;
@@ -91,7 +91,7 @@ ol {
 
 .icon {
     height: 30px;
-    vertical-align: middle;  
+    vertical-align: middle;
 }
 
 .navbar-default .navbar-nav>li>a {
@@ -162,7 +162,7 @@ z-index: 300;
 #red_box:hover, #red_box2:hover, #map_desc:hover, #info_box:hover {
   box-shadow: -1px 4px 4px 0 rgba(0,0,0,0.4);
   transition: all .2s ease-in-out;
-  
+
 }
 #clear_red_box:hover{
   box-shadow: -1px 4px 4px 0 rgba(0,0,0,0.4);
@@ -178,7 +178,7 @@ z-index: 300;
 }
 
 .navbar-static-top {
-background-color: #58585A;  
+background-color: #065b94;
 }
 
 .navbar {
