@@ -12,14 +12,8 @@ tar_load(RB_pre_post_compiled) ### pre and post admin 2 level data
 
 
 
-RB_pre_post_compiled <- RB_pre_post_compiled %>% mutate(
-  percentage_treated = round(popn_treated_during_current_month/total_population*100)
-)
-
-
-
-region_cols <-c("month","year","date", "adm1_name","cumulatative_target","cumulatative_percentage_treated",
-                "popn_treated_during_current_month", "utg_treatment_target_for_each_round","percentage_treated",
+region_cols <-c("month","year","date", "adm1_name","cumulatative_target",
+                "popn_treated_during_current_month", "utg_treatment_target_for_each_round",
                 "utg_2_treatment_target_for_the_whole_year", "total_popn_projected",
                 "popn_treated_round1", "popn_treated_round2", "popn_treated_cumulative_all_rounds",
                 "active_villages_for_the_year", "villages_treated_during_current_month",
@@ -37,17 +31,34 @@ region_cols <-c("month","year","date", "adm1_name","cumulatative_target","cumula
 RB_pre_post_compiled$month <- month(RB_pre_post_compiled$month,label = T)
 RB_pre_post_compiled$year <- factor(RB_pre_post_compiled$year)
 
-RB_pre_post_compiled <- RB_pre_post_compiled %>% group_by(year) %>%
-  mutate(
-    cumulatative_target = cumsum(popn_treated_during_current_month),
-    cumulatative_percentage_treated = cumsum(percentage_treated)) %>% ungroup()
+RB_pre_post_compiled <- RB_pre_post_compiled %>% group_by(adm2_name,year) %>%
+  mutate(cumulatative_target = cumsum(popn_treated_during_current_month)) %>% ungroup()
+
+RB_pre_post_compiled <- RB_pre_post_compiled %>% mutate(
+  cum_percentage_treated = round(cumulatative_target/total_population*100),
+  cum_percentage_utg = round(cumulatative_target/utg_treatment_target_for_each_round*100)
+
+)
+
 
 region_df <- RB_pre_post_compiled %>% select(region_cols) %>% group_by(date,month,year,adm1_name) %>%
   summarise_all(sum) %>% ungroup()
 
+region_df <- region_df %>% group_by(adm1_name,year) %>%
+  mutate(cumulatative_target = cumsum(popn_treated_during_current_month)) %>% ungroup()
+
+region_df <- region_df %>% mutate(
+  cum_percentage_treated = round(cumulatative_target/total_population*100),
+  cum_percentage_utg = round(cumulatative_target/utg_treatment_target_for_each_round*100)
+
+)
 
 
-
+# region_df <- region_df %>% mutate(
+#   cum_percentage_treated = round(cumulatative_target/total_population*100),
+#   cum_percentage_utg = round(cumulatative_target/utg_treatment_target_for_each_round*100)
+#
+# )
 
 
 
@@ -87,7 +98,13 @@ ui <- fluidPage(
                     plotOutput("graph_monthly_region", height = "300px"),
 
                     h4("Yearly Cumulatitative by zone"),
-                    plotOutput("cumulative_region_year", height = "300px")
+                    plotOutput("cumulative_region_year", height = "300px"),
+
+                    h4("Percentage treated, out of total population"),
+                    plotOutput("cum_percentage_treated_r", height = "300px"),
+
+                    h4("Percentage treated, out of UTG targets"),
+                    plotOutput("cum_percentage_treated_utg_r", height = "300px")
 
 
 
@@ -110,10 +127,12 @@ ui <- fluidPage(
                     h4("Treatment over time by zone"),
                     plotOutput("graph_monthly_treated", height = "300px"),
 
-
-                    hr(),
-                    h4("Percentage treated [SOMETHING IS WRONG]"),
+                    h4("Percentage treated, out of total population"),
                     plotOutput("cum_percentage_treated", height = "300px"),
+
+                    h4("Percentage treated, out of UTG targets"),
+
+                    plotOutput("cum_percentage_treated_utg", height = "300px"),
 
                     # h4("Treatment over time by round"),
                     # plotOutput("grpah_treatment_by_round", height = "300px"),
@@ -194,22 +213,22 @@ server <- function(input, output,session){
 
 
   ### treatement by round graph
-
-  df_line <- reactive({admin_2_level_data_filter() %>% select(date, adm1_name,adm2_name,popn_treated_round1,
-                                                              popn_treated_round2) %>%
-      pivot_longer(cols = !c("date","adm1_name","adm2_name"),names_to = "variable",values_to = "value")
-
-  })
-
-
-  output$grpah_treatment_by_round<- renderPlot({ggplot(data=df_line(),
-                                                       aes(x=date, y=value, colour=variable)) +
-      geom_line()+
-      theme(panel.background = element_rect(fill = "white",
-                                            colour = "black",
-                                            size = 0.5, linetype = "solid")) +
-      xlab("Date")+ ylab("Population treated by each round")
-  })
+#
+#   df_line <- reactive({admin_2_level_data_filter() %>% select(date, adm1_name,adm2_name,popn_treated_round1,
+#                                                               popn_treated_round2) %>%
+#       pivot_longer(cols = !c("date","adm1_name","adm2_name"),names_to = "variable",values_to = "value")
+#
+#   })
+#
+#
+#   output$grpah_treatment_by_round<- renderPlot({ggplot(data=df_line(),
+#                                                        aes(x=date, y=value, colour=variable)) +
+#       geom_line()+
+#       theme(panel.background = element_rect(fill = "white",
+#                                             colour = "black",
+#                                             size = 0.5, linetype = "solid")) +
+#       xlab("Date")+ ylab("Population treated by each round")
+#   })
 
   #### population treated cumalitative
 
@@ -240,13 +259,26 @@ server <- function(input, output,session){
   ###### cumulative graph percentage treated
   output$cum_percentage_treated<- renderPlot({
     ggplot(admin_2_level_data_filter(),
-           aes(x=month, y=percentage_treated,color = year,group= year)) +
+           aes(x=month, y=cum_percentage_treated,color = year,group= year)) +
       geom_line()+
       theme(panel.background = element_rect(fill = "white",
                                             colour = "black",
                                             size = 0.5, linetype = "solid")) +
-      xlab("Month")+ ylab("% treated")
+      xlab("Month")+ ylab("% treated, out of total population")
   })
+
+
+
+  output$cum_percentage_treated_utg<- renderPlot({
+    ggplot(admin_2_level_data_filter(),
+           aes(x=month, y=cum_percentage_utg,color = year,group= year)) +
+      geom_line()+
+      theme(panel.background = element_rect(fill = "white",
+                                            colour = "black",
+                                            size = 0.5, linetype = "solid")) +
+      xlab("Month")+ ylab("% treated, out of UTG Target")
+  })
+
 
   ################################################## start::rgion ######################
 
@@ -282,6 +314,30 @@ server <- function(input, output,session){
 
 
   }) ## monthly treated graph
+
+
+  ###### cumulative graph percentage treated
+  output$cum_percentage_treated_r<- renderPlot({
+    ggplot(graph_data(),
+           aes(x=month, y=cum_percentage_treated,color = year,group= year)) +
+      geom_line()+
+      theme(panel.background = element_rect(fill = "white",
+                                            colour = "black",
+                                            size = 0.5, linetype = "solid")) +
+      xlab("Month")+ ylab("% treated, out of total population")
+  })
+
+
+
+  output$cum_percentage_treated_utg_r<- renderPlot({
+    ggplot(graph_data(),
+           aes(x=month, y=cum_percentage_utg,color = year,group= year)) +
+      geom_line()+
+      theme(panel.background = element_rect(fill = "white",
+                                            colour = "black",
+                                            size = 0.5, linetype = "solid")) +
+      xlab("Month")+ ylab("% treated, out of UTG Target")
+  })
 
 
 
