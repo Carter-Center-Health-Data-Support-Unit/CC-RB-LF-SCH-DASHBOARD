@@ -78,3 +78,47 @@ cum_df_for_graph$year <- factor(cum_df_for_graph$year)
 ggplot(cum_df_for_graph, aes(x=month, y=cumulatative_target,color = year,group= year)) +
   geom_line()
 
+
+##### population data tabe
+
+pop_data <- RB_pre_post_compiled %>% select(adm2_name,adm1_name,year,total_population,
+                                            popn_treated_during_current_month,
+                                            utg_treatment_target_for_each_round,
+                                            utg_2_treatment_target_for_the_whole_year
+                                            )
+
+
+ggplot(pop_data, aes(x=year, y=total_population)) +
+  geom_boxplot()
+
+
+box_plot_data <-
+
+## max pop
+
+pop_data_max_sum <- pop_data %>% group_by(year,adm1_name,adm2_name) %>% summarise(
+  population_max = max(total_population,na.rm = T),
+  population_avg = mean(total_population,na.rm = T),
+  population_sum = sum(total_population,na.rm = T),
+
+  utg_target_max = max(utg_2_treatment_target_for_the_whole_year,na.rm = T),
+  utg_target_mean = max(utg_2_treatment_target_for_the_whole_year,na.rm = T),
+  utg_target_sum = max(utg_2_treatment_target_for_the_whole_year,na.rm = T),
+
+  )
+#%>% pivot_wider(id_cols = c(adm1_name,adm2_name),names_from = "year",values_from = "population")
+
+pop_data_max_sumdf <- pop_data_max_sum %>% filter(adm2_name== "awi")
+
+pop_data_max_sumdf_pi <- pop_data_max_sumdf %>% select(adm1_name,adm2_name,year,
+                                                       population_max,utg_target_max) %>%
+  pivot_longer(cols = c("population_max","utg_target_max"),values_to = "value",
+               names_to = "variable")
+
+ggplot(pop_data_max_sumdf_pi,
+       aes(x=year, y=value,group =variable,color = variable)) +
+  geom_line()+
+  geom_point()+
+  xlab("Year")+ ylab("Population")
+
+

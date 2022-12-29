@@ -5,6 +5,7 @@ library(shinyWidgets)
 library(tidyverse)
 library(targets)
 library(lubridate)
+library(DT)
 options(scipen = 999)
 
 # load data
@@ -54,6 +55,28 @@ region_df <- region_df %>% mutate(
 )
 
 
+pop_data <- RB_pre_post_compiled %>% select(adm2_name,adm1_name,year,total_population,
+                                            popn_treated_during_current_month,
+                                            utg_treatment_target_for_each_round,
+                                            utg_2_treatment_target_for_the_whole_year
+)
+
+## max_sum pop
+
+pop_data_max_sum <- pop_data %>% group_by(year,adm1_name,adm2_name) %>% summarise(
+  population_max = max(total_population,na.rm = T),
+  population_mean = mean(total_population,na.rm = T),
+  population_sum = sum(total_population,na.rm = T),
+  population_median = median(total_population,na.rm = T),
+
+
+  utg_target_max = max(utg_2_treatment_target_for_the_whole_year,na.rm = T),
+  utg_target_mean = max(utg_2_treatment_target_for_the_whole_year,na.rm = T),
+  utg_target_median = median(utg_2_treatment_target_for_the_whole_year,na.rm = T),
+  utg_target_sum = max(utg_2_treatment_target_for_the_whole_year,na.rm = T)
+
+)
+
 # region_df <- region_df %>% mutate(
 #   cum_percentage_treated = round(cumulatative_target/total_population*100),
 #   cum_percentage_utg = round(cumulatative_target/utg_treatment_target_for_each_round*100)
@@ -78,7 +101,50 @@ ui <- fluidPage(
     windowTitle = "CC-RB-SCH DASHBOARD",
     HTML('<a style="padding-left:20px;" class = "navbar-brand" href = "https://www.cartercenter.org" target="_blank"><img src = "logo.png" height = "46"></a><span class="navbar-text" style="font-size: 16px; color: #FFFFFF"><strong>ETHIOPIA CC-RB-LF-SCH DASHBOARD</strong></span>'),
 
-    tabPanel("Admin Level info!",
+    tabPanel("Explore population!",
+
+             tags$div(pickerInput("select_admin1_1",
+                                  label = "Select Region (Admin 1):",
+                                  choices = RB_pre_post_compiled$adm1_name %>% unique() %>% dput(),
+                                  selected = (RB_pre_post_compiled$adm1_name %>% unique() %>% dput())[1],
+                                  multiple = F,
+                                  options = pickerOptions(title = "Select", actionsBox = TRUE, liveSearch = TRUE)
+             ),style="display:inline-block"),
+
+
+             tags$div(pickerInput("select_admin2_1",
+                                  label = "Select Zone (Admin 2):",
+                                  choices = NULL,
+                                  selected = NULL,
+                                  multiple = F,
+                                  options = pickerOptions(title = "Select", actionsBox = TRUE, liveSearch = TRUE)
+             ),style="display:inline-block"),
+              hr(),
+
+             h4("Population::Box plot"),
+             plotOutput("population_box", height = "300px"),
+
+             h4("Population (max) vs target"),
+             plotOutput("population_graph", height = "300px"),
+             hr(),
+             h4("Population (mean) vs target"),
+             plotOutput("population_graph_mean", height = "300px"),
+
+             hr(),
+             h4("Population (median) vs target"),
+             plotOutput("population_graph_median", height = "300px"),
+
+
+             hr(),
+
+
+             # DTOutput("pop_table"), br(),
+
+    ), ## end tab 1
+
+
+
+        tabPanel("Admin Level info!",
 
 
              column(width = 6,
@@ -105,6 +171,8 @@ ui <- fluidPage(
 
                     h4("Percentage treated, out of UTG targets"),
                     plotOutput("cum_percentage_treated_utg_r", height = "300px")
+
+
 
 
 
@@ -145,6 +213,7 @@ ui <- fluidPage(
 
 
 
+
              ) ## end column
 
 
@@ -178,6 +247,8 @@ ui <- fluidPage(
 server <- function(input, output,session){
 
   admin1_name <- reactive({input$select_admin1})
+  admin1_name_1 <- reactive({input$select_admin1_1})
+
   admin_1_level_data_filter <-  reactive({RB_pre_post_compiled %>% dplyr::filter(adm1_name == admin1_name())})
 
 
@@ -185,13 +256,13 @@ server <- function(input, output,session){
 
   available_adm2 <- reactive({admin_1_level_data_filter()$adm2_name %>% unique()})
 
-  observe({
-    updatePickerInput(session, "select_admin2", choices = available_adm2())
-  })
-
+  observe({updatePickerInput(session, "select_admin2", choices = available_adm2())})
+  observe({updatePickerInput(session, "select_admin2_1", choices = available_adm2())})
 
 
   admin2_name <- reactive({input$select_admin2})
+  admin2_name_1 <- reactive({input$select_admin2_1})
+
   admin_2_level_data_filter <-  reactive({admin_1_level_data_filter() %>% dplyr::filter(adm2_name == admin2_name())})
 
 
@@ -235,7 +306,7 @@ server <- function(input, output,session){
   output$grpah_treatment_cuma<- renderPlot({
     ggplot(data=admin_2_level_data_filter(),
            aes(x=month, y=popn_treated_cumulative_all_rounds,color = year,group= year)) +
-      geom_line()+
+      geom_line()+geom_point()+
       theme(panel.background = element_rect(fill = "white",
                                             colour = "black",
                                             size = 0.5, linetype = "solid")) +
@@ -247,7 +318,7 @@ server <- function(input, output,session){
   ###### cumulatative graph
   output$grpah_treatment_cuma_cal<- renderPlot({
   ggplot(admin_2_level_data_filter(), aes(x=month, y=cumulatative_target,color = year,group= year)) +
-    geom_line()+
+    geom_line()+geom_point()+
           theme(panel.background = element_rect(fill = "white",
                                                 colour = "black",
                                                 size = 0.5, linetype = "solid")) +
@@ -260,7 +331,7 @@ server <- function(input, output,session){
   output$cum_percentage_treated<- renderPlot({
     ggplot(admin_2_level_data_filter(),
            aes(x=month, y=cum_percentage_treated,color = year,group= year)) +
-      geom_line()+
+      geom_line()+geom_point()+
       theme(panel.background = element_rect(fill = "white",
                                             colour = "black",
                                             size = 0.5, linetype = "solid")) +
@@ -272,12 +343,102 @@ server <- function(input, output,session){
   output$cum_percentage_treated_utg<- renderPlot({
     ggplot(admin_2_level_data_filter(),
            aes(x=month, y=cum_percentage_utg,color = year,group= year)) +
-      geom_line()+
+      geom_line()+geom_point()+
       theme(panel.background = element_rect(fill = "white",
                                             colour = "black",
                                             size = 0.5, linetype = "solid")) +
       xlab("Month")+ ylab("% treated, out of UTG Target")
   })
+
+
+
+  ######################### start::population graph ##############################
+
+  admin_1_filter_pop <-  reactive({pop_data_max_sum %>% dplyr::filter(adm1_name == admin1_name_1())})
+  pop_graph_data <- reactive({admin_1_filter_pop() %>% dplyr::filter(adm2_name == admin2_name_1())})
+
+
+  box_df1 <-  reactive({RB_pre_post_compiled %>% dplyr::filter(adm1_name == admin1_name_1())})
+  box_plot_df <- reactive({box_df1() %>% dplyr::filter(adm2_name == admin2_name_1())})
+
+
+
+  output$population_box<- renderPlot({
+  ggplot(box_plot_df(), aes(x=year, y=total_population)) +
+    geom_boxplot()+
+    theme(panel.background = element_rect(fill = "white",
+                                                        colour = "black",
+                                                        size = 0.5, linetype = "solid"))
+  })
+
+
+ # pop max
+  pop_data_max_sumdf_pi <- reactive({pop_graph_data() %>% select(adm1_name,adm2_name,year,
+                                                         population_max,utg_target_max) %>%
+    pivot_longer(cols = c("population_max","utg_target_max"),values_to = "value",
+                 names_to = "variable")})
+
+
+
+  output$population_graph<- renderPlot({
+    ggplot(pop_data_max_sumdf_pi(),
+           aes(x=year, y=value, group =variable,color = variable)) +
+      geom_line()+
+      geom_point()+
+      theme(panel.background = element_rect(fill = "white",
+                                            colour = "black",
+                                            size = 0.5, linetype = "solid")) +
+      xlab("Year")+ ylab("Population/Targets")
+  })
+
+  # pop_mean
+
+  pop_data_max_sumdf_pi_mean <- reactive({pop_graph_data() %>% select(adm1_name,adm2_name,year,
+                                                                 population_mean,utg_target_mean) %>%
+      pivot_longer(cols = c("population_mean","utg_target_mean"),values_to = "value",
+                   names_to = "variable")})
+
+
+
+  output$population_graph_mean<- renderPlot({
+    ggplot(pop_data_max_sumdf_pi_mean(),
+           aes(x=year, y=value, group =variable,color = variable)) +
+      geom_line()+
+      geom_point()+
+      theme(panel.background = element_rect(fill = "white",
+                                            colour = "black",
+                                            size = 0.5, linetype = "solid")) +
+      xlab("Year")+ ylab("Population/Targets")
+  })
+
+
+
+  # pop_mean
+
+  pop_data_max_sumdf_pi_median <- reactive({pop_graph_data() %>% select(adm1_name,adm2_name,year,
+                                                                      population_median,utg_target_median) %>%
+      pivot_longer(cols = c("population_median","utg_target_median"),values_to = "value",
+                   names_to = "variable")})
+
+
+
+  output$population_graph_median<- renderPlot({
+    ggplot(pop_data_max_sumdf_pi_median(),
+           aes(x=year, y=value, group =variable,color = variable)) +
+      geom_line()+
+      geom_point()+
+      theme(panel.background = element_rect(fill = "white",
+                                            colour = "black",
+                                            size = 0.5, linetype = "solid")) +
+      xlab("Year")+ ylab("Population/Targets")
+  })
+
+
+
+  ######################### end::population graph ##############################
+
+
+
 
 
   ################################################## start::rgion ######################
@@ -306,7 +467,7 @@ server <- function(input, output,session){
 
 
       ggplot(graph_data(), aes(x=month, y=cumulatative_target,color = year,group= year)) +
-        geom_line()+
+        geom_line()+geom_point()+
         theme(panel.background = element_rect(fill = "white",
                                               colour = "black",
                                               size = 0.5, linetype = "solid")) +
@@ -320,7 +481,7 @@ server <- function(input, output,session){
   output$cum_percentage_treated_r<- renderPlot({
     ggplot(graph_data(),
            aes(x=month, y=cum_percentage_treated,color = year,group= year)) +
-      geom_line()+
+      geom_line()+geom_point()+
       theme(panel.background = element_rect(fill = "white",
                                             colour = "black",
                                             size = 0.5, linetype = "solid")) +
@@ -332,7 +493,7 @@ server <- function(input, output,session){
   output$cum_percentage_treated_utg_r<- renderPlot({
     ggplot(graph_data(),
            aes(x=month, y=cum_percentage_utg,color = year,group= year)) +
-      geom_line()+
+      geom_line()+geom_point()+
       theme(panel.background = element_rect(fill = "white",
                                             colour = "black",
                                             size = 0.5, linetype = "solid")) +
@@ -344,6 +505,25 @@ server <- function(input, output,session){
 
 
   ################################################ END::rgion ###############################
+
+
+
+  ####### start::Dt table ########
+  output$pop_table <- renderDT({
+    datatable(pop_data,
+              caption = htmltools::tags$caption(
+                style = 'caption-side: top; text-align: center;',
+                'Table 1: ', htmltools::em('Population by admin 2')
+
+              ))
+
+
+  })
+
+
+  ####### END::Dt table ########
+
+
 
 
 } # end server
