@@ -6,11 +6,53 @@ library(tidyverse)
 library(targets)
 library(lubridate)
 library(DT)
+library(sf)
+library(htmltools)
+library(snakecase)
+library(leaflet)
+
 options(scipen = 999)
 
 # load data
 tar_load(RB_pre_post_compiled) ### pre and post admin 2 level data
 
+#### fixing Admin 2 boundary name
+
+
+### read ocha boundary
+
+admin_zero <- st_read("data/shapefile/eth_admbnda_adm0_csa_bofedb_itos_2021.shp")
+admin1_boundary<- st_read("data/shapefile/eth_admbnda_adm1_csa_bofedb_2021.shp")
+admin2_boundary<- st_read("data/shapefile/eth_admbnda_adm2_csa_bofedb_2021.shp") %>% mutate(
+  ADM2_EN = case_when(ADM2_EN == "Itang Special woreda" ~ "Itang Special Woreda",T~ ADM2_EN)
+)
+
+######################################### START::Fix admin 1 Name ############################
+admin2_boundary$ADM1_EN %>% unique()
+
+RB_pre_post_compiled <- RB_pre_post_compiled %>% mutate(
+  adm1_name = to_title_case(adm1_name)
+) %>% mutate(
+  adm1_name = case_when(adm1_name == "Snnp" ~ "SNNP",T~adm1_name)
+)
+
+######################################### END::Fix admin 1 Name ############################
+
+######################################### START::Fix admin 2 Name ############################
+RB_pre_post_compiled$adm2_name <- RB_pre_post_compiled$adm2_name %>% snakecase::to_title_case()
+
+RB_pre_post_compiled <- RB_pre_post_compiled %>% mutate(
+  adm2_name = case_when(adm2_name == "North Shewa Am" ~ "North Shewa",
+                        adm2_name == "North Shoa 2" ~ "North Shewa",
+                        adm2_name == "North Shewa or" ~"North Shewa",
+                        T ~  adm2_name)
+) %>% mutate(
+  adm2_name = case_when(adm1_name == "Amhara" & adm2_name == "North Shewa" ~ "North Shewa (AM)",
+                        adm1_name == "Oromia" & adm2_name == "North Shewa" ~ "North Shewa (OR)",
+                        T~adm2_name)
+)
+
+######################################### END::Fix admin 2 Name ############################
 
 
 region_cols <-c("month","year","date", "adm1_name","cumulatative_target",
@@ -85,6 +127,54 @@ pop_data_max_sum <- pop_data %>% group_by(year,adm1_name,adm2_name) %>% summaris
 
 
 
+############# START:: CURRENT DATA:: FOR CURRENT SITUATION MONITORING TAB ######
+
+current_data <- RB_pre_post_compiled %>% filter(date == max(RB_pre_post_compiled$date)) %>% mutate(
+  treated_vs_target = round(popn_treated_during_current_month/utg_treatment_target_for_each_round*100,2)
+)
+
+current_data$adm2_name[duplicated(current_data$adm2_name )]
+
+
+current_data <- current_data %>% distinct(adm2_name,.keep_all = T) ### to remove
+
+spatial_data <- admin2_boundary %>% select(ADM2_EN) %>% rename(
+  adm2_name = ADM2_EN) %>% left_join(current_data)
+
+
+## preparing base map
+
+# leaflet_map -------------------------------------------------------------
+
+mypalette <- colorNumeric( palette="viridis", domain=spatial_data$treated_vs_target, na.color="#58585A")
+
+
+base_map <- leaflet::leaflet() %>% leaflet::addProviderTiles(providers$CartoDB.Positron) %>%
+  leaflet::addPolygons(data = admin_zero,color = "#EE5859",fillColor = "transparent") %>%
+  leaflet::addPolygons(data = admin1_boundary,color = "#58585A",
+                       weight = 2,dashArray = "12",fillColor = "transparent") %>%
+  leaflet::addPolygons(data = spatial_data,color = "#58585A",
+                       popup = case_when( is.na(spatial_data$treated_vs_target) ~ "Non assessed", T~
+                                            paste("Region:", spatial_data$adm1_name, "<br>",
+                                                  "Zone:", spatial_data$adm2_name, "<br>",
+                                                  "Target achived", paste0(spatial_data$treated_vs_target),"%")),
+
+
+                       label = ~htmlEscape(case_when( is.na(spatial_data$treated_vs_target) ~ "",T~
+                                                        paste0(adm2_name,"(",spatial_data$treated_vs_target, "%)"))),
+                       labelOptions = labelOptions(noHide = F,
+                                                   direction = 'center',
+                                                   textOnly = T,
+                                                   style = list(
+                                                     "font-family" = "serif",
+                                                     "font-size" = "15px",
+                                                     "font-weight" =  "bold"
+                                                   )),
+
+                       weight = 1.5,dashArray = "12",fillColor = ~mypalette(treated_vs_target) ) #%>% setView(zoom = 6)
+
+############# END:: CURRENT DATA:: FOR CURRENT SITUATION MONITORING TAB ######
+
 ######### UI ###############
 
 ui <- fluidPage(
@@ -119,7 +209,7 @@ ui <- fluidPage(
                                   multiple = F,
                                   options = pickerOptions(title = "Select", actionsBox = TRUE, liveSearch = TRUE)
              ),style="display:inline-block"),
-              hr(),
+             hr(),
 
              h4("Population::Box plot"),
              plotOutput("population_box", height = "300px"),
@@ -144,7 +234,7 @@ ui <- fluidPage(
 
 
 
-        tabPanel("Admin Level info!",
+    tabPanel("Admin Level info!",
 
 
              column(width = 6,
@@ -223,9 +313,21 @@ ui <- fluidPage(
     tabPanel("Current Situation Monitoring",
              column(width = 12,
                     br(),
-                    h4("Comming soon!")
+                    h4("Target achived during current month"),
+                    hr(),
+                    div(class = "outer",
+                    tags$style(type = "text/css", ".outer {
+                    position: fixed;
+                    top: 102px;
+                    left: 0;
+                    right: 0;
+                    bottom: 0;
+                    overflow: hidden;
+                    padding: 0}"),leafletOutput("map",height = "100%"))
 
-                    )
+                    # h4("Comming soon!")
+
+             )
 
 
 
@@ -284,22 +386,22 @@ server <- function(input, output,session){
 
 
   ### treatement by round graph
-#
-#   df_line <- reactive({admin_2_level_data_filter() %>% select(date, adm1_name,adm2_name,popn_treated_round1,
-#                                                               popn_treated_round2) %>%
-#       pivot_longer(cols = !c("date","adm1_name","adm2_name"),names_to = "variable",values_to = "value")
-#
-#   })
-#
-#
-#   output$grpah_treatment_by_round<- renderPlot({ggplot(data=df_line(),
-#                                                        aes(x=date, y=value, colour=variable)) +
-#       geom_line()+
-#       theme(panel.background = element_rect(fill = "white",
-#                                             colour = "black",
-#                                             size = 0.5, linetype = "solid")) +
-#       xlab("Date")+ ylab("Population treated by each round")
-#   })
+  #
+  #   df_line <- reactive({admin_2_level_data_filter() %>% select(date, adm1_name,adm2_name,popn_treated_round1,
+  #                                                               popn_treated_round2) %>%
+  #       pivot_longer(cols = !c("date","adm1_name","adm2_name"),names_to = "variable",values_to = "value")
+  #
+  #   })
+  #
+  #
+  #   output$grpah_treatment_by_round<- renderPlot({ggplot(data=df_line(),
+  #                                                        aes(x=date, y=value, colour=variable)) +
+  #       geom_line()+
+  #       theme(panel.background = element_rect(fill = "white",
+  #                                             colour = "black",
+  #                                             size = 0.5, linetype = "solid")) +
+  #       xlab("Date")+ ylab("Population treated by each round")
+  #   })
 
   #### population treated cumalitative
 
@@ -317,13 +419,13 @@ server <- function(input, output,session){
 
   ###### cumulatative graph
   output$grpah_treatment_cuma_cal<- renderPlot({
-  ggplot(admin_2_level_data_filter(), aes(x=month, y=cumulatative_target,color = year,group= year)) +
-    geom_line()+geom_point()+
-          theme(panel.background = element_rect(fill = "white",
-                                                colour = "black",
-                                                size = 0.5, linetype = "solid")) +
-          xlab("Month")+ ylab("Population treated (Cumulative[calculated])")
-      })
+    ggplot(admin_2_level_data_filter(), aes(x=month, y=cumulatative_target,color = year,group= year)) +
+      geom_line()+geom_point()+
+      theme(panel.background = element_rect(fill = "white",
+                                            colour = "black",
+                                            size = 0.5, linetype = "solid")) +
+      xlab("Month")+ ylab("Population treated (Cumulative[calculated])")
+  })
 
 
 
@@ -364,19 +466,19 @@ server <- function(input, output,session){
 
 
   output$population_box<- renderPlot({
-  ggplot(box_plot_df(), aes(x=year, y=total_population)) +
-    geom_boxplot()+
-    theme(panel.background = element_rect(fill = "white",
-                                                        colour = "black",
-                                                        size = 0.5, linetype = "solid"))
+    ggplot(box_plot_df(), aes(x=year, y=total_population)) +
+      geom_boxplot()+
+      theme(panel.background = element_rect(fill = "white",
+                                            colour = "black",
+                                            size = 0.5, linetype = "solid"))
   })
 
 
- # pop max
+  # pop max
   pop_data_max_sumdf_pi <- reactive({pop_graph_data() %>% select(adm1_name,adm2_name,year,
-                                                         population_max,utg_target_max) %>%
-    pivot_longer(cols = c("population_max","utg_target_max"),values_to = "value",
-                 names_to = "variable")})
+                                                                 population_max,utg_target_max) %>%
+      pivot_longer(cols = c("population_max","utg_target_max"),values_to = "value",
+                   names_to = "variable")})
 
 
 
@@ -394,7 +496,7 @@ server <- function(input, output,session){
   # pop_mean
 
   pop_data_max_sumdf_pi_mean <- reactive({pop_graph_data() %>% select(adm1_name,adm2_name,year,
-                                                                 population_mean,utg_target_mean) %>%
+                                                                      population_mean,utg_target_mean) %>%
       pivot_longer(cols = c("population_mean","utg_target_mean"),values_to = "value",
                    names_to = "variable")})
 
@@ -416,7 +518,7 @@ server <- function(input, output,session){
   # pop_mean
 
   pop_data_max_sumdf_pi_median <- reactive({pop_graph_data() %>% select(adm1_name,adm2_name,year,
-                                                                      population_median,utg_target_median) %>%
+                                                                        population_median,utg_target_median) %>%
       pivot_longer(cols = c("population_median","utg_target_median"),values_to = "value",
                    names_to = "variable")})
 
@@ -466,12 +568,12 @@ server <- function(input, output,session){
   output$cumulative_region_year<- renderPlot({
 
 
-      ggplot(graph_data(), aes(x=month, y=cumulatative_target,color = year,group= year)) +
-        geom_line()+geom_point()+
-        theme(panel.background = element_rect(fill = "white",
-                                              colour = "black",
-                                              size = 0.5, linetype = "solid")) +
-        xlab("Month")+ ylab("Population treated (Cumulative[calculated])")
+    ggplot(graph_data(), aes(x=month, y=cumulatative_target,color = year,group= year)) +
+      geom_line()+geom_point()+
+      theme(panel.background = element_rect(fill = "white",
+                                            colour = "black",
+                                            size = 0.5, linetype = "solid")) +
+      xlab("Month")+ ylab("Population treated (Cumulative[calculated])")
 
 
   }) ## monthly treated graph
@@ -524,6 +626,11 @@ server <- function(input, output,session){
   ####### END::Dt table ########
 
 
+
+  ##### TAB 3::current situation monitoring ####
+
+  output$map <-  renderLeaflet({
+    base_map })
 
 
 } # end server
