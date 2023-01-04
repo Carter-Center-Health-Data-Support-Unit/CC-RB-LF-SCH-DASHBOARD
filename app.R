@@ -10,6 +10,8 @@ library(sf)
 library(htmltools)
 library(snakecase)
 library(leaflet)
+# load internal funcs
+invisible(purrr::map(dir(here::here("R/"),full.names = T),~source(.x,verbose = FALSE,echo = F)))
 
 options(scipen = 999)
 
@@ -21,36 +23,52 @@ tar_load(RB_pre_post_compiled) ### pre and post admin 2 level data
 
 ### read ocha boundary
 
-admin_zero <- st_read("data/shapefile/eth_admbnda_adm0_csa_bofedb_itos_2021.shp")
-admin1_boundary<- st_read("data/shapefile/eth_admbnda_adm1_csa_bofedb_2021.shp")
-admin2_boundary<- st_read("data/shapefile/eth_admbnda_adm2_csa_bofedb_2021.shp") %>% mutate(
-  ADM2_EN = case_when(ADM2_EN == "Itang Special woreda" ~ "Itang Special Woreda",T~ ADM2_EN)
-)
+admin_zero <- st_read("data/shapefile/eth_admbnda_adm0_csa_bofedb_itos_2021.shp") |>
+  janitor::clean_names() |>
+  select(adm0_en, adm0_pcode) |>
+  sanitize_admins()
+
+admin1_boundary<- st_read("data/shapefile/eth_admbnda_adm1_csa_bofedb_2021.shp") |>
+  janitor::clean_names() |>
+  select(adm0_en, adm0_pcode,adm1_en, adm1_pcode) |>
+  sanitize_admins()
+
+admin2_boundary<- st_read("data/shapefile/eth_admbnda_adm2_csa_bofedb_2021.shp") |>
+  janitor::clean_names() |>
+  select(adm0_en, adm0_pcode,adm1_en, adm1_pcode, adm2_en, adm2_pcode) |>
+  sanitize_admins()
+
+
+
+
+#%>% mutate(
+  # ADM2_EN = case_when(ADM2_EN == "Itang Special woreda" ~ "Itang Special Woreda",T~ ADM2_EN)
+# )
 
 ######################################### START::Fix admin 1 Name ############################
-admin2_boundary$ADM1_EN %>% unique()
+# admin2_boundary$ADM1_EN %>% unique()
 
-RB_pre_post_compiled <- RB_pre_post_compiled %>% mutate(
-  adm1_name = to_title_case(adm1_name)
-) %>% mutate(
-  adm1_name = case_when(adm1_name == "Snnp" ~ "SNNP",T~adm1_name)
-)
+# RB_pre_post_compiled <- RB_pre_post_compiled %>% mutate(
+#   adm1_name = to_title_case(adm1_name)
+# ) %>% mutate(
+#   adm1_name = case_when(adm1_name == "Snnp" ~ "SNNP",T~adm1_name)
+# )
 
 ######################################### END::Fix admin 1 Name ############################
 
 ######################################### START::Fix admin 2 Name ############################
-RB_pre_post_compiled$adm2_name <- RB_pre_post_compiled$adm2_name %>% snakecase::to_title_case()
+# RB_pre_post_compiled$adm2_name <- RB_pre_post_compiled$adm2_name %>% snakecase::to_title_case()
 
-RB_pre_post_compiled <- RB_pre_post_compiled %>% mutate(
-  adm2_name = case_when(adm2_name == "North Shewa Am" ~ "North Shewa",
-                        adm2_name == "North Shoa 2" ~ "North Shewa",
-                        adm2_name == "North Shewa or" ~"North Shewa",
-                        T ~  adm2_name)
-) %>% mutate(
-  adm2_name = case_when(adm1_name == "Amhara" & adm2_name == "North Shewa" ~ "North Shewa (AM)",
-                        adm1_name == "Oromia" & adm2_name == "North Shewa" ~ "North Shewa (OR)",
-                        T~adm2_name)
-)
+# RB_pre_post_compiled <- RB_pre_post_compiled %>% mutate(
+#   adm2_name = case_when(adm2_name == "North Shewa Am" ~ "North Shewa",
+#                         adm2_name == "North Shoa 2" ~ "North Shewa",
+#                         adm2_name == "North Shewa or" ~"North Shewa",
+#                         T ~  adm2_name)
+# ) %>% mutate(
+#   adm2_name = case_when(adm1_name == "Amhara" & adm2_name == "North Shewa" ~ "North Shewa (AM)",
+#                         adm1_name == "Oromia" & adm2_name == "North Shewa" ~ "North Shewa (OR)",
+#                         T~adm2_name)
+# )
 
 ######################################### END::Fix admin 2 Name ############################
 
@@ -74,8 +92,10 @@ region_cols <-c("month","year","date", "adm1_name","cumulatative_target",
 RB_pre_post_compiled$month <- month(RB_pre_post_compiled$month,label = T)
 RB_pre_post_compiled$year <- factor(RB_pre_post_compiled$year)
 
-RB_pre_post_compiled <- RB_pre_post_compiled %>% group_by(adm2_name,year) %>%
-  mutate(cumulatative_target = cumsum(popn_treated_during_current_month)) %>% ungroup()
+RB_pre_post_compiled <- RB_pre_post_compiled %>%
+  group_by(adm2_name,year) %>%
+  mutate(cumulatative_target = cumsum(popn_treated_during_current_month)) %>%
+  ungroup()
 
 RB_pre_post_compiled <- RB_pre_post_compiled %>% mutate(
   cum_percentage_treated = round(cumulatative_target/total_population*100),
@@ -87,7 +107,8 @@ RB_pre_post_compiled <- RB_pre_post_compiled %>% mutate(
 region_df <- RB_pre_post_compiled %>% select(region_cols) %>% group_by(date,month,year,adm1_name) %>%
   summarise_all(sum) %>% ungroup()
 
-region_df <- region_df %>% group_by(adm1_name,year) %>%
+region_df <- region_df %>%
+  group_by(adm1_name,year) %>%
   mutate(cumulatative_target = cumsum(popn_treated_during_current_month)) %>% ungroup()
 
 region_df <- region_df %>% mutate(
@@ -129,17 +150,17 @@ pop_data_max_sum <- pop_data %>% group_by(year,adm1_name,adm2_name) %>% summaris
 
 ############# START:: CURRENT DATA:: FOR CURRENT SITUATION MONITORING TAB ######
 
-current_data <- RB_pre_post_compiled %>% filter(date == max(RB_pre_post_compiled$date)) %>% mutate(
+current_data <- RB_pre_post_compiled %>%
+  filter(date == max(RB_pre_post_compiled$date)) %>%
+  mutate(
   treated_vs_target = round(popn_treated_during_current_month/utg_treatment_target_for_each_round*100,2)
 )
-
-current_data$adm2_name[duplicated(current_data$adm2_name )]
 
 
 current_data <- current_data %>% distinct(adm2_name,.keep_all = T) ### to remove
 
-spatial_data <- admin2_boundary %>% select(ADM2_EN) %>% rename(
-  adm2_name = ADM2_EN) %>% left_join(current_data)
+spatial_data <- admin2_boundary %>%
+  select(adm2_name= adm2_en)  %>% left_join(current_data)
 
 
 ## preparing base map
