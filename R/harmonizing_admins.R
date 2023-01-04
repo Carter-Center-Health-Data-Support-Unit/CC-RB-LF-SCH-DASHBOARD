@@ -86,6 +86,7 @@ load_admins_from_raw <- function(df){
 clean_vec_names<- function(x){
 
   x_unique <- x[!is.na(x)] |>
+    tolower() |>
     unique()
 
   x_unique_clean <- x_unique |>
@@ -94,7 +95,7 @@ clean_vec_names<- function(x){
   x_lookup <- x_unique_clean |>
     rlang::set_names(x_unique)
 
-  dplyr::recode(x,!!!x_lookup)
+  dplyr::recode(x |> tolower(),!!!x_lookup)
 
 
 }
