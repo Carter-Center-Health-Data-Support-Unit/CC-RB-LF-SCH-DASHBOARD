@@ -257,59 +257,17 @@ ui <- fluidPage(
 
     windowTitle = "CC-RB-SCH DASHBOARD",
     HTML('<a style="padding-left:20px;" class = "navbar-brand" href = "https://www.cartercenter.org" target="_blank"><img src = "logo.png" height = "46"></a><span class="navbar-text" style="font-size: 16px; color: #FFFFFF"><strong>ETHIOPIA CC-RB-LF-SCH DASHBOARD</strong></span>'),
-
-    tabPanel("Explore population!",
-
-             tags$div(pickerInput("select_admin1_1",
-                                  label = "Select Region (Admin 1):",
-                                  choices = RB_pre_post_compiled$adm1_name %>% unique() %>% dput(),
-                                  selected = (RB_pre_post_compiled$adm1_name %>% unique() %>% dput())[1],
-                                  multiple = F,
-                                  options = pickerOptions(title = "Select", actionsBox = TRUE, liveSearch = TRUE)
-             ),style="display:inline-block"),
-
-
-             tags$div(pickerInput("select_admin2_1",
-                                  label = "Select Zone (Admin 2):",
-                                  choices = NULL,
-                                  selected = NULL,
-                                  multiple = F,
-                                  options = pickerOptions(title = "Select", actionsBox = TRUE, liveSearch = TRUE)
-             ),style="display:inline-block"),
-             hr(),
-
-             h4("Population::Box plot"),
-             plotOutput("population_box", height = "300px"),
-
-             h4("Population (max) vs target"),
-             plotOutput("population_graph", height = "300px"),
-             hr(),
-             h4("Population (mean) vs target"),
-             plotOutput("population_graph_mean", height = "300px"),
-
-             hr(),
-             h4("Population (median) vs target"),
-             plotOutput("population_graph_median", height = "300px"),
-
-
-             hr(),
-
-
-             # DTOutput("pop_table"), br(),
-
-    ), ## end tab 1
-
-
-
-    tabPanel("Admin Level info!",
+    tabPanel("Overview",
              column(
                width= 12,
                h3("% Ultimate Treatment Goal by Month and Zone"),
                ggiraph::ggiraphOutput("heat_chart",
                                       width = "100%",height="500px")
-             ),
+             )
+             )
+    ,
 
-
+    tabPanel("Admin Level info!",
              column(width = 6,
                     br(),
                     h3("Region level Info"),
@@ -406,7 +364,49 @@ ui <- fluidPage(
 
 
 
-    ) ## end tab 2
+    ) ,## end tab 2,
+    tabPanel("Explore population!",
+             h3("coming soon")
+
+             # tags$div(pickerInput("select_admin1_1",
+             #                      label = "Select Region (Admin 1):",
+             #                      choices = RB_pre_post_compiled$adm1_name %>% unique() %>% dput(),
+             #                      selected = (RB_pre_post_compiled$adm1_name %>% unique() %>% dput())[1],
+             #                      multiple = F,
+             #                      options = pickerOptions(title = "Select", actionsBox = TRUE, liveSearch = TRUE)
+             # ),style="display:inline-block"),
+             #
+             #
+             # tags$div(pickerInput("select_admin2_1",
+             #                      label = "Select Zone (Admin 2):",
+             #                      choices = NULL,
+             #                      selected = NULL,
+             #                      multiple = F,
+             #                      options = pickerOptions(title = "Select", actionsBox = TRUE, liveSearch = TRUE)
+             # ),style="display:inline-block"),
+             # hr(),
+             #
+             # h4("Population::Box plot"),
+             # plotOutput("population_box", height = "300px"),
+             #
+             # h4("Population (max) vs target"),
+             # plotOutput("population_graph", height = "300px"),
+             # hr(),
+             # h4("Population (mean) vs target"),
+             # plotOutput("population_graph_mean", height = "300px"),
+             #
+             # hr(),
+             # h4("Population (median) vs target"),
+             # plotOutput("population_graph_median", height = "300px"),
+             #
+             #
+             # hr(),
+
+
+             # DTOutput("pop_table"), br(),
+
+    ) ## end tab 1
+
 
 
 
