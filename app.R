@@ -122,6 +122,7 @@ region_df <- region_df %>% mutate(
   cum_percentage_utg = round(cumulatative_target/utg_treatment_target_for_each_round*100)
 
 )
+RB_pre_post_compiled |>
 
 
 pop_data <- RB_pre_post_compiled %>% select(adm2_name,adm1_name,year,total_population,
@@ -170,43 +171,6 @@ spatial_data <- admin2_boundary %>%
 current_monitoring_title = glue::glue("{lubridate::month(latest_date,label=T, abbr=F)} {lubridate::year(latest_date)} - Current Program Status ")
 
 plot_heatchart <-  heat_map_gg(.dat =RB_pre_post_compiled,date_col = "date" )
-
-# dat_latest_year <- RB_pre_post_compiled |>
-#   filter(lubridate::year(date)==lubridate::year(latest_date))
-
-# dat_p_treated_by_utg <- dat_latest_year |>
-#   arrange(date) |>
-#   group_by(adm1_name,
-#            adm2_name
-#            ) |>
-#   summarise(
-#     treated_cumulative = cumsum(popn_treated_during_current_month),
-#     utg_total = utg_2_treatment_target_for_the_whole_year,
-#     date= unique(date),.groups = "keep"
-#   ) |>
-#   mutate(
-#     updated_utg_total = utg_total[which(date==max(date))],
-#     percent_treated_utg_total = treated_cumulative/updated_utg_total
-#     )
-# dat_p_treated_by_utg |>
-#   ggplot(aes(x=date, y=percent_treated_utg_total, color=adm2_name,group=adm2_name))+
-#   geom_line()+
-#   geom_point()+
-#   facet_wrap(~adm1_name)+
-#   theme(
-#     legend.position = "none",
-#     panel.background = element_rect(fill = "white",
-#                                     colour = "black",
-#                                     size = 0.5, linetype = "solid")
-#   )
-#
-#
-# dat_latest_year |>
-#   group_by(adm1_name, adm2_name ,date) |>
-#   summarise(
-#     utg_whol = unique(utg_2_treatment_target_for_the_whole_year)
-#   )
-
 
 ## preparing base map
 
