@@ -327,8 +327,11 @@ ui <- fluidPage(
 
 
     ) ,## end tab 2,
+    tabPanel("Export",
+             h3("coming soon")),##### End tab 3
+
     tabPanel("Explore population!",
-             h3("coming soon")
+             h3("coming soon - what do we want to be able to export")
 
              # tags$div(pickerInput("select_admin1_1",
              #                      label = "Select Region (Admin 1):",
