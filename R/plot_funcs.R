@@ -85,7 +85,11 @@ rb_boxplot <- function(.data,
 #                                     size = 0.5, linetype = "solid")
 #   )
 
-
+abbreviate_large_numbers <- function(tx) {
+  div <- findInterval(as.numeric(gsub("\\,", "", tx)),
+                      c(0, 1e3, 1e6, 1e9, 1e12) )  # modify this if negative numbers are possible
+  paste(round( as.numeric(gsub("\\,","",tx))/10^(3*(div-1)), 2),
+        c("","K","M","B","T")[div] )}
 
 heat_map_gg <- function(.dat, date_col="date"){
 
@@ -161,21 +165,45 @@ heat_map_gg <- function(.dat, date_col="date"){
                                                              Zone: {adm2_name}<br>
                                                              Year: {year}<br>
                                                              Month: {month}<br>
+                                                             Treated cumulative ({year}): {abbreviate_large_numbers(treated_cumulative)}<br>
                                                              % goal treated: {round(pct_treated_utg_total*100,1)}<br>",
 
                                          )),color="grey")+
       geom_vline(xintercept = lubridate::ymd(c(
-        "2017-01-01",
-        "2018-01-01",
-        "2019-01-01",
-        "2020-01-01",
-        "2021-01-01",
-        "2022-01-01")))
+        "2016-12-31",
+        "2017-12-31",
+        "2018-12-31",
+        "2019-12-31",
+        "2020-12-31",
+        "2021-12-31"
+        )))
 
   return(pf)
 }
 
 
+
+# RB_pre_post_compiled |>
+#   group_by(adm1_name,adm2_name) |>
+#   summarise(
+#     date= unique(date),
+#     total_treatments = cumsum(popn_treated_during_current_month)
+#   ) |>
+#   ggplot(
+#     aes(x= date, y=total_treatments, color =adm2_name)
+#   )+
+#   geom_point()+ geom_line()
+#
+# RB_pre_post_compiled |>
+#   group_by(adm1_name,date) |>
+#   summarise(
+#     total_treatments = sum(popn_treated_during_current_month,na.rm=T)
+#   ) |>
+#   mutate(
+#     cumulative_treatment= cumsum(total_treatments)
+#   ) |>
+#   ggplot(aes(x= date, y= cumulative_treatment, color = adm1_name))+
+#   geom_line()
 
 
 

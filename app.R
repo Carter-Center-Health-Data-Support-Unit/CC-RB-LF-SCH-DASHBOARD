@@ -122,8 +122,6 @@ region_df <- region_df %>% mutate(
   cum_percentage_utg = round(cumulatative_target/utg_treatment_target_for_each_round*100)
 
 )
-RB_pre_post_compiled |>
-
 
 pop_data <- RB_pre_post_compiled %>% select(adm2_name,adm1_name,year,total_population,
                                             popn_treated_during_current_month,
