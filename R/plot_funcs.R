@@ -69,3 +69,127 @@ rb_boxplot <- function(.data,
   return(p3)
 
 }
+# dat_latest_year <- RB_pre_post_compiled |>
+#   filter(lubridate::year(date)==lubridate::year(latest_date))
+#
+#
+# dat_p_treated_by_utg |>
+#   ggplot(aes(x=date, y=percent_treated_utg_total, color=adm2_name,group=adm2_name))+
+#   geom_line()+
+#   geom_point()+
+#   facet_wrap(~adm1_name)+
+#   theme(
+#     legend.position = "none",
+#     panel.background = element_rect(fill = "white",
+#                                     colour = "black",
+#                                     size = 0.5, linetype = "solid")
+#   )
+
+
+
+heat_map_gg <- function(.dat, date_col="date"){
+
+  dat_p <- .dat |>
+    arrange(date) |>
+    group_by(year,
+             adm1_name,
+             adm2_name
+    ) |>
+    summarise(
+      treated_cumulative = cumsum(popn_treated_during_current_month),
+      utg_total = utg_2_treatment_target_for_the_whole_year,
+      date= unique(date),.groups = "keep"
+    ) |>
+    mutate(
+      updated_utg_total = utg_total[which(date==max(date))],
+      pct_treated_utg_total = treated_cumulative/updated_utg_total,
+      year = lubridate::year(date),
+      month= lubridate::month(date)
+    ) |>
+    filter(!is.na(adm2_name))
+
+    p_base <- dat_p |>
+      ggplot2::ggplot()+
+      # gghdx::scale_fill_hdx_mint(drop=F)+
+      # scale_fill_continuous()+
+      gghdx::scale_fill_gradient_hdx_tomato(
+        breaks= seq(0,1,by=0.1),
+        label=scales::percent)+
+    # ggplot2::scale_fill_manual(values = trigger_pal(name= "white_to_rd"),
+    #                            drop=F,guide=ggplot2::guide_legend(nrow=1))+
+
+    ggplot2::scale_x_date(
+      # breaks = "year",
+                          date_breaks = "3 months",
+                          # date_major_breaks= "year",
+                          date_minor_breaks = "1 month",
+                          date_labels = "%b-%y",expand = c(0,0))+
+    # ggplot2::scale_y_discrete(
+    # expand= c(0,0)
+    # )+
+    ggplot2::theme_bw()+
+    ggplot2::facet_grid(rows = vars(adm1_name),
+                        switch = "both",
+                        scales = "free",
+                        space = "free"
+    ) +
+    ggplot2::theme(
+      legend.position = "none",
+      legend.title = element_blank(),
+      legend.margin=margin(0,0,0,0),
+      legend.key.width = unit(3,"line"),
+      legend.key.height = unit(1,"line"),
+      legend.text = element_text(size = 12),
+      # text= element_text(family = "TT Arial"),
+      # text = element_text(size = 10, family = "roboto"),
+      # legend.box.margin=margin(-10,-10,-10,-10),
+      axis.title.x = element_blank(),
+      axis.text.x = element_text(angle = 90),
+      axis.title.y = element_blank(),
+      panel.spacing = unit(0, "lines"),
+      strip.background = element_blank(),
+      strip.placement = "left"
+
+    )+
+    guides(fill = guide_legend(label.position = "bottom",nrow=1))
+
+    pf <- p_base+
+      ggiraph::geom_tile_interactive(aes(x= date,
+                                         y= adm2_name,
+                                         fill=pct_treated_utg_total,
+                                         tooltip= glue::glue("Region: {adm1_name}<br>
+                                                             Zone: {adm2_name}<br>
+                                                             Year: {year}<br>
+                                                             Month: {month}<br>
+                                                             % goal treated: {round(pct_treated_utg_total*100,1)}<br>",
+
+                                         )),color="grey")+
+      geom_vline(xintercept = lubridate::ymd(c(
+        "2017-01-01",
+        "2018-01-01",
+        "2019-01-01",
+        "2020-01-01",
+        "2021-01-01",
+        "2022-01-01")))
+
+  return(pf)
+}
+
+
+
+
+
+
+
+trigger_pal <- function(name= "white_to_rd"){
+  if(name=="white_to_rd"){
+    c(
+      "#ffffffff", # white - 0
+                 "#fffee0", # light yellow -1
+                 "#f3e838ff",# med yellow -2
+                 "#eb7d24ff", # orange - thresh 1 week
+                 "#cd2026ff", # red - thresh 2 week
+                 "#5d060cff" # dark red/brown - trigger
+    )
+  }
+}

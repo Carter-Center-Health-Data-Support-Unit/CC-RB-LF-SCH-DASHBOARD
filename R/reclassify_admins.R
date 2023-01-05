@@ -20,7 +20,7 @@ sep_adm_2_3 <-  function(df){
   df |>
     separate(col = adm2_name,into = c("adm2_rev","adm3_rev"),sep = "-") |>
     mutate(adm3_f= if_else(!is.na(adm3_rev),adm3_rev, adm3_name),.after="adm2_rev") |>
-    filter(!adm3_f %in% as.character(c(1:1000))) |>
+    filter(!adm3_f %in% as.character(c(0:1000))) |>
     select(-adm3_name,-adm3_rev) |>
     dplyr::rename(
       adm2_name="adm2_rev",
@@ -71,19 +71,37 @@ sanitize_admins <-  function(df){
 
 clean_adm1 <-  function(df){
   df |>
-    mutate(
+    dplyr::mutate(
       adm1_name = case_when(
         adm1_name == "ben_gumuz"~"benishangul_gumz",
         adm1_name == "gambella"~"gambela" ,
         adm1_name == "snnpr"~"snnp", #snnp used to match HDX file
-        adm1_name == "swe"~"south_west_ethiopia",
+        adm1_name %in% c("s_we","swe")~"south_west_ethiopia",
         TRUE~ adm1_name
       )
     )
 
 }
 
-
+clean_metekel_dam_worker <-  function(df){
+  df |>
+    dplyr::mutate(
+      adm_1_2_3=  glue::glue("{adm1_name}-{adm2_name}-{adm3_name}"),
+      adm1_name = dplyr::case_when(
+        stringr::str_detect(adm_1_2_3, "dam-work|dam_work")~"benishangul_gumz",
+        TRUE~adm1_name
+      ),
+      adm2_name = dplyr::case_when(
+        stringr::str_detect(adm_1_2_3,"dam-work|dam_work")~"metekel",
+        TRUE~adm2_name
+      ),
+      adm3_name = dplyr::case_when(
+        stringr::str_detect(adm_1_2_3, "dam-work|dam_work")~"dam_workers",
+        TRUE~adm3_name
+      ),
+      adm_1_2_3=  glue::glue("{adm1_name}-{adm2_name}-{adm3_name}")
+    )
+}
 
 #' Title
 #'
@@ -93,11 +111,61 @@ clean_adm1 <-  function(df){
 #' @export
 #'
 #' @examples
+
+clean_admins_lfrx_patch <- function(df){
+  df |>
+    clean_metekel_dam_worker() |>
+    dplyr::mutate(
+      adm_1_2_3=  glue::glue("{adm1_name}-{adm2_name}-{adm3_name}"),
+      adm1_name =
+        dplyr::case_when(
+          adm1_name == "south_west_ethiopia" & adm2_name== "south_omo"~"snnp",
+          adm1_name %in% c("gambela","amahara","amhara") & adm2_name %in% c("metekel","dam_workers_metekel")~"benishangul_gumz",
+          TRUE ~ adm1_name
+        ),
+      adm_1_2_3=  glue::glue("{adm1_name}-{adm2_name}-{adm3_name}"),
+
+      adm3_name =
+        dplyr::case_when(
+          # snnp-gofa-mekeloza  ~ ?
+          # ~snnp-south_omo-selamego
+          # "snnp-south_omo-bena_tse_june"
+          adm_1_2_3=="snnp-gofa-melogada"~ "melo_gada",
+          # "snnp-south_omo-baka_dawula_ari" "boko_dawula"
+          adm_1_2_3=="snnp-south_omo-baka_dawula_ari"~"boko_dawula",
+          adm_1_2_3=="snnp-south_omo-bena_tse_june" ~"bena_tsemay",
+          adm_1_2_3=="oromia-ilu_aba_bora-alge_sache"~"alge_sachi",
+          adm_1_2_3=="oromia-ilu_aba_bora-boilo_nopa"~ "bilo_nopha",
+          adm_1_2_3=="amhara-south_gondar-muja" ~ "sede_muja",
+          adm_1_2_3 ==  "snnp-gofa-mekeloza"  ~ "melekoza",
+          adm_1_2_3=="snnp-south_omo-selamego"~"salamago",
+          TRUE~ adm3_name
+        ),
+      adm_1_2_3=  glue::glue("{adm1_name}-{adm2_name}-{adm3_name}")
+    ) #|>
+    # select(-adm_1_2_3)
+}
+
+apply_name_clean_patch <-  function(df){
+  clean_admins_lfrx_patch(df)
+}
+#' Title
+#'
+#' @param df
+#'
+#' @return
+#' @export
+#'
+#' @examples
 clean_adm2 <-  function(df,data_format="current"){
+  # df <- df |>
+  #   dplyr::mutate(
+  #     # adm_1_2_3=  glue::glue("{adm1_name}-{adm2_name}-{adm3_name}") # remove for now for the sake of the old format data which does not ahve adm1 , or 3 at this point
+  #     )
 
   if(data_format=="current"){
     res <- df |>
-      mutate(
+      dplyr::mutate(
         # TYPE 2: INCORRECT ADMIN 1 - FIX ADMIN 1
         adm1_name= case_when(
           adm1_name == "snnp" & adm2_name %in%c("kaffa","kefa")~"south_west_ethiopia",
@@ -112,10 +180,16 @@ clean_adm2 <-  function(df,data_format="current"){
           adm2_name == "agnuwa"~"agnewak" ,
           adm2_name == "west_gojjam"~"west_gojam" ,
           adm1_name == "south_west_ethiopia" & adm2_name == "kaffa"~"kefa" ,
-          adm1_name == "oromia" & adm2_name == "north_shoa"~"north_shewa_or" ,
-          adm1_name == "amhara" & adm2_name == "north_shoa"~"north_shewa_am" ,
+          adm1_name == "oromia" & adm2_name %in% c("north_shoa",
+                                                   "north_shoa_or",
+                                                   "north_shoa_2")~"north_shewa_or" ,
+          adm1_name == "amhara" & adm2_name == c("north_shoa",
+                                                 "north_shoa_2",
+                                                 "north_shoa_ensaro",
+                                                 "north_showa_am")~"north_shewa_am" ,
           adm1_name == "oromia" & adm2_name == "sw_shoa"~"south_west_shewa" ,
           adm1_name == "gambela" & adm2_name == "mezheng"~"majang" ,
+          adm1_name == "gambela" & adm2_name == "agnua"~"agnewak" ,
           adm1_name == "amhara" & adm2_name == "south_wollo"~"south_wello" ,
           adm1_name == "gambela" & adm2_name == "itang_sp_w"~"itang_special_woreda" ,
           adm1_name == "oromia" & adm2_name == "e_arsi"~"arsi" ,
@@ -130,8 +204,10 @@ clean_adm2 <-  function(df,data_format="current"){
           adm2_name == "bench_maji" ~ "bench_sheko",
 
           TRUE ~ adm2_name
-        )
+        ),
+        adm_1_2_3=  glue::glue("{adm1_name}-{adm2_name}-{adm3_name}")
       )
+
 
   }
   if(data_format=="old"){
@@ -172,16 +248,9 @@ clean_adm2 <-  function(df,data_format="current"){
           adm2_name == "west_harerge"~"west_hararge",
           adm2_name == "west_harerge"~"west_hararge",
           adm2_name =="refugges_gambella"~"refugees" ,# this is how it's reclassified in "new", but not sure if should add gambella tag here since we don't have adm1...
-
           TRUE ~ adm2_name
-
-
-
-
-
-
-
-        )
+        )#,
+        # adm_1_2_3=  glue::glue("{adm1_name}-{adm2_name}-{adm3_name}") # no adm1 or 3 in old format data yet
       )
   }
   return(res)
@@ -314,9 +383,10 @@ clean_adm3 <- function(df){
       adm_1_2_3 == "south_west_ethiopia-sheka-yeki_woreda" ~ "yeki",
 
       TRUE~ adm3_name
-    )
+    ),
+    adm_1_2_3=  glue::glue("{adm1_name}-{adm2_name}-{adm3_name}")
 
-  ) |> select(-adm_1_2_3)
+  )
 }
 
 
@@ -347,10 +417,12 @@ standardize_admin_names <-  function(df,data_format="current"){
       )
 
   }
+  # so no admin 1 in old format data....need to join later by adm2
   if(data_format=="old"){
     res <- df|>
       dplyr::rename_with(.cols = dplyr::any_of(c("name_of_zone" )),.fn = ~"zone") |>
       dplyr::rename(
+        # adm1_name="region",
         adm2_name = "zone"
       )
   }
@@ -385,7 +457,8 @@ drop_summary_rows <-  function(df,data_format="current"){
         !str_detect(adm2_name,"^[Tt]otal"),
         !str_detect(adm2_name,"^note"),
         !str_detect(adm2_name,"^treatment"),
-        !str_detect(adm2_name,"^7_kebeles_in_surma_district_of_bench_maji_zone*")
+        !str_detect(adm2_name,"7_kebeles_in_surma_district_of_bench_maji_zone*"),
+        !str_detect(adm2_name,"x7kebeles_in_surma_district_of_bench_maji_zone_were_not_inclu")
         )
 
   }
@@ -397,15 +470,16 @@ drop_summary_rows <-  function(df,data_format="current"){
 
 clean_names_and_admins <-  function(df,data_format="current"){
   df |>
-      janitor::clean_names() |>
-      standardize_admin_names(data_format = data_format)|>
-      drop_summary_rows() |>
-      sep_adm_2_3() |>
-      sanitize_admins() |>
-      clean_adm1() |>
-      clean_adm2() |>
-      clean_adm3() |>
-      remove_empty_artefact_cols()
+    janitor::clean_names() |>
+    standardize_admin_names(data_format = data_format)|>
+    drop_summary_rows() |>
+    sep_adm_2_3() |>
+    sanitize_admins() |>
+    clean_adm1() |>
+    clean_adm2() |>
+    clean_adm3() |>
+    clean_admins_lfrx_patch() |>
+    remove_empty_artefact_cols()
 }
 
 
@@ -447,8 +521,10 @@ extract_pre_clean_names_adms_batch <- function(df_list,data_format= "current"){
                       ) |>
                       parse_top_table() |>
                       clean_names_and_admins(data_format = data_format)
+
                   }
       )
+
 
 
   }
@@ -459,14 +535,16 @@ extract_pre_clean_names_adms_batch <- function(df_list,data_format= "current"){
         .x |>
           parse_top_table() |>
           janitor::clean_names() |>
+          # clean_names_and_admins(data_format = data_format)
           standardize_admin_names(data_format = data_format) |>
           drop_summary_rows(data_format = data_format) |>
           sanitize_admins() |>
+          # no admin 1 provided in old format data... need to attach later
           clean_adm2(data_format = data_format)
-
 
       }
       )
+
 
   }
   return(res)
@@ -475,11 +553,12 @@ extract_pre_clean_names_adms_batch <- function(df_list,data_format= "current"){
 
 
 rename_cols_lookup_add_dates_batch <- function(df_list,colname_lookup,lookup_fixed=T){
-  df_list |>
+  df_prepped <- df_list |>
     purrr::map2_dfr(.y= names(df_list), ~{
       print(.y)
       df_names_harmonized <-rename_cols_with_lookup(df = .x,
-                                                    lookup = colname_lookup,lookup_fixed = lookup_fixed)
+                                                    lookup = colname_lookup,
+                                                    lookup_fixed = lookup_fixed)
       df_names_harmonized |>
         dplyr::mutate(
           file_name= .y,
@@ -491,6 +570,11 @@ rename_cols_lookup_add_dates_batch <- function(df_list,colname_lookup,lookup_fix
 
     }
     )
+  df_prepped |>
+    dplyr::mutate(
+      total_population= dplyr::if_else(is.na(total_popn_census),total_popn_projected,total_popn_census)
+    ) |>
+    dplyr::filter(!(year==2016 & adm2_name %in% c("west_gojam","east_gojam")))
 
 }
 
@@ -527,11 +611,16 @@ join_master_admin_to_pre201905_data <- function(df_list, master_adm){
     )
 
 }
-
+# standard_pop_col <- function(df){
+#   df |>
+#     dplyr::mutate(
+#       total_population= dplyr::if_else(is.na(total_popn_census),total_popn_projected,total_popn_census)
+#     )
+# }
 
 # for current data
-bind_rows_add_dates <-  function(df_list){
-  dplyr::bind_rows(df_list) |>
+bind_rows_add_dates_fill_pop <-  function(df_list, data_format= "current"){
+  w_dates <- dplyr::bind_rows(df_list) |>
     dplyr::mutate(
       year=str_sub(string = file_name,start = 1,end = 4) |> as.numeric(),
       month=str_sub(string = file_name,start = 5,end = 6) |> as.numeric(),
@@ -543,10 +632,25 @@ bind_rows_add_dates <-  function(df_list){
     ) |>
     readr::type_convert( ) |>
     dplyr::mutate(
-      active_villages_for_the_year =as.numeric(active_villages_for_the_year)
-    )
+      active_villages_for_the_year =as.numeric(active_villages_for_the_year),
+      total_population= dplyr::if_else(is.na(total_popn_census),total_popn_projected,total_popn_census)
+    ) |>
+    dplyr::select(date,everything())
 
+  # this section is meant to fill in population value that dont make sense
+  # this is mostly taken care of w `filter` for old format data in `rename_cols_lookup_add_dates_batch`, new data needs a litle more help
+  if(data_format=="old"){
+    res <- w_dates
+  }
 
+  if(data_format=="current"){
+    res <- w_dates |>
+      dplyr::group_by(adm1_name,adm2_name,adm3_name) |>
+      dplyr::arrange(adm3_name,year,month,date) |>
+      tidyr::fill(total_population,.direction="downup") |>
+      dplyr::ungroup()
+  }
+  return(res)
 }
 
 

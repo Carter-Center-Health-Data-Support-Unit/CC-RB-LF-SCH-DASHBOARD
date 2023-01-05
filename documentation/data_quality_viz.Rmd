@@ -21,52 +21,10 @@ invisible(purrr::map(dir(here("R/"),full.names = T),~source(.x,verbose = FALSE,e
 targets::tar_load_everything()
 ```
 
-## Iterative Cleaning 
-- this might fit better into a different notebook, but i realized there is an issue with the coherence between admin 2 and admin 3 reporting
 
-
-
-alright we have blank NA cols. This is being looked into, in the meantime let's patch it so we can continue
-
-This patch needs to be added to cleaning rmd and then functionalized, then added to `{targets}` pipeline.. for now let's just use the code in place:
+Good no cases where pop treated during current month is > total population
 ```{r}
-# the pre 201905 can easily be taken are of by just removing these 2
-# should add this to the `{targets}` cleaning pipeline:
-
-RB_pre201905_df_compiled <- RB_pre201905_df_compiled |> 
-  mutate(
-  total_population = if_else(is.na(total_popn_census),total_popn_projected,total_popn_census)  
-  ) |> 
-  filter(!(year==2016 & adm2_name %in% c("west_gojam","east_gojam")))
-  
-# Now for the post data: 
-RB_post201905_df_compiled <- RB_post201905_df_compiled |> 
-  mutate(
-  total_population = if_else(is.na(total_popn_census),total_popn_projected,total_popn_census)  
-  ) |> 
-  select(date,everything()) |>  # bring date to front
-  group_by(adm1_name,adm2_name,adm3_name) |> 
-  arrange(adm3_name,year,month,date) |> 
-  tidyr::fill(total_population,.direction="downup") #first fill from down, then up sequential then reverse.
-
-```
-
-
-pre 201905 is only reported at admin 2 level - therefore let's summarise and simplify both to adm2
-```{r}
-RB_pre_adm2 <- RB_pre201905_df_compiled |> 
-  summarise_to_adm2()
-
-RB_post_adm2 <- RB_post201905_df_compiled |> 
-  summarise_to_adm2()
-
-RB_adm2 <-  bind_rows(RB_post_adm2,RB_pre_adm2) # combine
-```
-
-
-
-```{r}
-pop_treated_gt_total_pop<- RB_adm2 |> 
+pop_treated_gt_total_pop<- RB_pre_post_compiled |> 
   filter(
     popn_treated_during_current_month>total_population
   )
@@ -74,17 +32,20 @@ pop_treated_gt_total_pop<- RB_adm2 |>
 
 We see there are now **`r nrow(pop_treated_gt_total_pop)`** cases where the reported # treated monthly is greater than the total population reported that month.
 
-Let's visually inspect adm2 level monthly reported pop treated vs total population. There are some high outliers? anything to do about these?
+Let's visually inspect adm2 level monthly reported pop treated vs total population. 
+
+- There are some high outliers? anything to do about these?
+- Generally looks pretty decent
 
 ```{r}
-rb_boxplot(.data = RB_adm2,
+rb_boxplot(.data = RB_pre_post_compiled,
            x = "adm2_name",
            y = "popn_treated_during_current_month",
            pop = "total_population" )
 
 
 # log scaled
-rb_boxplot(.data = RB_adm2,
+rb_boxplot(.data = RB_pre_post_compiled,
            x = "adm2_name",
            y = "popn_treated_during_current_month",
            pop = "total_population" ,log = T)
@@ -92,6 +53,82 @@ rb_boxplot(.data = RB_adm2,
 
 
 ```
+
+I think we should inspect the pop treated over time to make sure the numbers looks good. Alright, I like that, doesn't look lik numbers are getting repeated.
+
+```{r}
+RB_pre_post_compiled |> 
+  ggplot(aes(x=date,y=popn_treated_during_current_month,color=adm2_name))+
+  geom_point()+
+  geom_line()+
+  scale_y_continuous(labels = scales::comma)+
+  scale_x_date(date_breaks = "6 month",date_labels = "%Y-%b",date_minor_breaks = "1 month")+
+  theme_bw()+
+  labs(y="Population Treated")+
+  theme(
+    axis.text.x = element_text(angle=90)
+  )
+
+```
+Let's lookat at `adm3` level post 201905
+
+- hmm that doesn't look too good ... what's going on?
+```{r}
+
+RB_post201905_adm3 |> 
+  ggplot(
+    aes(x= date,
+        y=popn_treated_during_current_month,
+        color=adm3_name,
+        group=adm3_name,
+        )
+  )+
+  geom_path()+
+  theme(
+    legend.position = "none"
+  )
+
+```
+
+```{r}
+na_pop_treated_adm3 <- RB_post201905_adm3 |>
+  filter(is.na(popn_treated_during_current_month))
+```
+
+For `popn_treated_during_current_month`, only **`r nrow(RB_post201905_adm3)`** out of **`nrow(na_pop_treated_adm3)`** values not recorded as `NA`... let's replace those NAs with `0` 
+
+boom, viz makes more sense. Chosen to show each admin 3 as a a line, but color by adm 2 group. Can play with this.
+```{r}
+
+
+RB_post201905_adm3 |> 
+  mutate(
+  popn_treated_during_current_month=  replace_na(popn_treated_during_current_month,replace = 0)
+  ) |> 
+    ggplot(
+    aes(x= date,
+        y=popn_treated_during_current_month,
+        color=adm2_name,
+        group=adm3_name,
+        )
+  )+
+  geom_path()+
+  geom_point()+
+  scale_y_continuous(labels = scales::comma)+
+  scale_x_date(date_breaks = "1 month",date_labels = "%Y-%b")+
+  labs(y="Pop Treated Current Month")+
+  theme_bw()+
+  theme(
+    axis.text.x = element_text(angle=90),
+    legend.position = "none"
+
+  )
+  
+```
+
+
+```
+
 
 Shold fin out a bit more about cumulative all_rounds
 ```{r}

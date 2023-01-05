@@ -1,0 +1,13 @@
+name: CC-RB-LF-SCH-DASHBOARD
+title: CC-RB-LF-SCH-DASHBOARD
+username:
+account: geocrunch
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 7946951
+bundleId: 6694465
+url: https://geocrunch.shinyapps.io/CC-RB-LF-SCH-DASHBOARD/
+when: 1672778881.94266
+lastSyncTime: 1672778881.94268
+asMultiple: FALSE
+asStatic: FALSE
