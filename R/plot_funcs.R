@@ -69,21 +69,56 @@ rb_boxplot <- function(.data,
   return(p3)
 
 }
-# dat_latest_year <- RB_pre_post_compiled |>
-#   filter(lubridate::year(date)==lubridate::year(latest_date))
-#
-#
-# dat_p_treated_by_utg |>
-#   ggplot(aes(x=date, y=percent_treated_utg_total, color=adm2_name,group=adm2_name))+
-#   geom_line()+
-#   geom_point()+
-#   facet_wrap(~adm1_name)+
-#   theme(
-#     legend.position = "none",
-#     panel.background = element_rect(fill = "white",
-#                                     colour = "black",
-#                                     size = 0.5, linetype = "solid")
-#   )
+
+plot_utg_remaining_year <-  function(.dat=RB_pre_post_compiled){
+  latest_date <- max(.dat$date)
+  plot_title <- glue::glue("Treatments remaining in {lubridate::year(latest_date)}")
+  dat_latest_year <- .dat |>
+    filter(lubridate::year(date)==lubridate::year(latest_date))
+  p_date_latest_date <- dat_latest_year |>
+    arrange(date) |>
+    group_by(year,
+             adm1_name,
+             adm2_name
+    ) |>
+    summarise(
+      treated_cumulative = cumsum(popn_treated_during_current_month),
+      utg_total = utg_2_treatment_target_for_the_whole_year,
+      date= unique(date),.groups = "keep"
+    ) |>
+    mutate(
+      updated_utg_total = utg_total[which(date==max(date))],
+      utg_year_remain = updated_utg_total-treated_cumulative,
+      year = lubridate::year(date),
+      month= lubridate::month(date)
+    ) |>
+    filter(!is.na(adm2_name)) |>
+    filter(date==latest_date)
+  p_date_latest_date |>
+    ggplot(aes(x=reorder(adm2_name,utg_year_remain),
+               utg_year_remain, fill= adm1_name))+
+    geom_bar(stat="identity")+
+    scale_fill_brewer(palette = "Dark2")+
+    scale_y_continuous(breaks = c(5e3,100e3, 500e3, 1e6, 3e6),
+                       labels=abbreviate_large_numbers(c(5e3,100e3, 500e3, 1e6, 3e6)))+
+    labs(y="Remaining Treatments (2022)")+
+    coord_flip()+
+    theme(
+      axis.title.y = element_blank(),
+      axis.text.x= element_text(angle=90),
+      panel.background = element_rect(fill='transparent'), #transparent panel bg
+      plot.background = element_rect(fill='transparent', color=NA),
+      legend.background = element_rect(fill='transparent'), #transparent legend bg
+      legend.box.background = element_rect(fill='transparent')
+    )
+}
+
+
+
+
+
+
+
 
 abbreviate_large_numbers <- function(tx) {
   div <- findInterval(as.numeric(gsub("\\,", "", tx)),

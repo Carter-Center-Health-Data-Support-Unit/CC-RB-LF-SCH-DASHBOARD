@@ -161,6 +161,8 @@ current_data <- RB_pre_post_compiled %>%
 )
 
 
+
+
 current_data <- current_data %>% distinct(adm2_name,.keep_all = T) ### to remove
 
 spatial_data <- admin2_boundary %>%
@@ -169,7 +171,7 @@ spatial_data <- admin2_boundary %>%
 current_monitoring_title = glue::glue("{lubridate::month(latest_date,label=T, abbr=F)} {lubridate::year(latest_date)} - Current Program Status ")
 
 plot_heatchart <-  heat_map_gg(.dat =RB_pre_post_compiled,date_col = "date" )
-
+bar_plot_utg_remain <- plot_utg_remaining_year(.dat = RB_pre_post_compiled)
 ## preparing base map
 
 # leaflet_map -------------------------------------------------------------
@@ -209,7 +211,6 @@ base_map <- leaflet::leaflet() %>%
 ui <- fluidPage(
 
   # Styling -----------------------------------------------------------------
-
   tags$head(
     HTML('<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />'), includeCSS("style.css")
   ),
@@ -303,6 +304,15 @@ ui <- fluidPage(
 
     ### start tab 2
     tabPanel("Current Situation Monitoring",
+             tags$style("
+        #controls {
+          background-color: #ddd;
+          opacity: 0.25;
+        }
+        #controls:hover{
+          opacity: 0.5;
+        }
+               "),
              column(width = 12,
                     br(),
                     h4(current_monitoring_title),
@@ -316,7 +326,14 @@ ui <- fluidPage(
                     bottom: 0;
                     overflow: hidden;
                     padding: 0}"),
-                    leafletOutput("map",height = "100%"))#,
+                    leafletOutput("map",height = "100%")),
+                    absolutePanel(id="controls",
+                                  class = "panel panel-default", fixed = TRUE,
+                                  draggable = F, top = 25, left = "auto", right = 20,
+                                  width = 400,height =700,
+
+                                  plotOutput("plot_utg_remain",width= 400,height=700)
+                    )
 
 
 
@@ -328,10 +345,10 @@ ui <- fluidPage(
 
     ) ,## end tab 2,
     tabPanel("Export",
-             h3("coming soon")),##### End tab 3
+             h3("coming soon - what do we want to be able to export")),##### End tab 3
 
     tabPanel("Explore population!",
-             h3("coming soon - what do we want to be able to export")
+             h3("coming soon")
 
              # tags$div(pickerInput("select_admin1_1",
              #                      label = "Select Region (Admin 1):",
@@ -390,6 +407,9 @@ server <- function(input, output,session){
   output$heat_chart <- ggiraph::renderggiraph({
     ggiraph::girafe(ggobj = plot_heatchart,width_svg = 16, height_svg =5)
   })
+  output$plot_utg_remain <-  renderPlot({
+    bar_plot_utg_remain
+  })
   admin1_name <- reactive({input$select_admin1})
   admin1_name_1 <- reactive({input$select_admin1_1})
 
@@ -446,6 +466,7 @@ server <- function(input, output,session){
   #   })
 
   #### population treated cumalitative
+
 
   output$grpah_treatment_cuma<- renderPlot({
     ggplot(data=admin_2_level_data_filter(),
