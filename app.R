@@ -103,7 +103,6 @@ RB_pre_post_compiled <- RB_pre_post_compiled %>% mutate(
 
 )
 
-
 region_df <- RB_pre_post_compiled %>%
   select(all_of(region_cols)) %>%
   group_by(date,month,year,adm1_name) %>%
@@ -139,8 +138,6 @@ pop_data_max_sum <- pop_data %>% group_by(year,adm1_name,adm2_name) %>%
   population_mean = mean(total_population,na.rm = T),
   population_sum = sum(total_population,na.rm = T),
   population_median = median(total_population,na.rm = T),
-
-
   utg_target_max = max(utg_2_treatment_target_for_the_whole_year,na.rm = T),
   utg_target_mean = max(utg_2_treatment_target_for_the_whole_year,na.rm = T),
   utg_target_median = median(utg_2_treatment_target_for_the_whole_year,na.rm = T),
@@ -172,27 +169,44 @@ spatial_data <- admin2_boundary %>%
 
 current_monitoring_title = glue::glue("{lubridate::month(latest_date,label=T, abbr=F)} {lubridate::year(latest_date)} - Current Program Status ")
 
+plot_heatchart <-  heat_map_gg(.dat =RB_pre_post_compiled,date_col = "date" )
 
-dat_latest_year <- RB_pre_post_compiled |>
-  filter(lubridate::year(date)==lubridate::year(latest_date))
-dat_latest_year |>
-  arrange(date) |>
-  group_by(adm1_name,
-           adm2_name,
-           # month
-           ) |>
-  summarise(
-    treated_cumulative = cumsum(popn_treated_during_current_month),
-    utg_total = utg_2_treatment_target_for_the_whole_year
-  ) |>
-  print(n=100)
+# dat_latest_year <- RB_pre_post_compiled |>
+#   filter(lubridate::year(date)==lubridate::year(latest_date))
 
-dat_latest_year |>
-  group_by(adm1_name, adm2_name ,date) |>
-  summarise(
-    utg_whol = unique(utg_2_treatment_target_for_the_whole_year)
-  )
-  # utg_2_treatment_target_for_the_whole_year
+# dat_p_treated_by_utg <- dat_latest_year |>
+#   arrange(date) |>
+#   group_by(adm1_name,
+#            adm2_name
+#            ) |>
+#   summarise(
+#     treated_cumulative = cumsum(popn_treated_during_current_month),
+#     utg_total = utg_2_treatment_target_for_the_whole_year,
+#     date= unique(date),.groups = "keep"
+#   ) |>
+#   mutate(
+#     updated_utg_total = utg_total[which(date==max(date))],
+#     percent_treated_utg_total = treated_cumulative/updated_utg_total
+#     )
+# dat_p_treated_by_utg |>
+#   ggplot(aes(x=date, y=percent_treated_utg_total, color=adm2_name,group=adm2_name))+
+#   geom_line()+
+#   geom_point()+
+#   facet_wrap(~adm1_name)+
+#   theme(
+#     legend.position = "none",
+#     panel.background = element_rect(fill = "white",
+#                                     colour = "black",
+#                                     size = 0.5, linetype = "solid")
+#   )
+#
+#
+# dat_latest_year |>
+#   group_by(adm1_name, adm2_name ,date) |>
+#   summarise(
+#     utg_whol = unique(utg_2_treatment_target_for_the_whole_year)
+#   )
+
 
 ## preparing base map
 
@@ -201,7 +215,8 @@ dat_latest_year |>
 mypalette <- colorNumeric( palette="viridis", domain=spatial_data$treated_vs_target, na.color="#58585A")
 
 
-base_map <- leaflet::leaflet() %>% leaflet::addProviderTiles(providers$CartoDB.Positron) %>%
+base_map <- leaflet::leaflet() %>%
+  leaflet::addProviderTiles(providers$CartoDB.Positron) %>%
   leaflet::addPolygons(data = admin_zero,color = "#EE5859",fillColor = "transparent") %>%
   leaflet::addPolygons(data = admin1_boundary,color = "#58585A",
                        weight = 2,dashArray = "12",fillColor = "transparent") %>%
@@ -287,11 +302,16 @@ ui <- fluidPage(
 
 
     tabPanel("Admin Level info!",
+             column(
+               width= 12,
+               h3("% Ultimate Treatment Goal by Month and Zone"),
+               ggiraph::ggiraphOutput("heat_chart",
+                                      width = "100%",height="500px")
+             ),
 
 
              column(width = 6,
                     br(),
-
                     h3("Region level Info"),
                     tags$div(pickerInput("select_admin1",
                                          label = "Select Region (Admin 1):",
@@ -368,7 +388,7 @@ ui <- fluidPage(
                     h4(current_monitoring_title),
                     hr(),
                     div(class = "outer",
-                    tags$style(type = "text/css", ".outer {
+                        tags$style(type = "text/css", ".outer {
                     position: fixed;
                     top: 102px;
                     left: 0;
@@ -376,7 +396,9 @@ ui <- fluidPage(
                     bottom: 0;
                     overflow: hidden;
                     padding: 0}"),
-                    leafletOutput("map",height = "100%"))
+                    leafletOutput("map",height = "100%"))#,
+
+
 
                     # h4("Comming soon!")
 
@@ -400,7 +422,9 @@ ui <- fluidPage(
 
 ################### server ################
 server <- function(input, output,session){
-
+  output$heat_chart <- ggiraph::renderggiraph({
+    ggiraph::girafe(ggobj = plot_heatchart,width_svg = 16, height_svg =5)
+  })
   admin1_name <- reactive({input$select_admin1})
   admin1_name_1 <- reactive({input$select_admin1_1})
 
