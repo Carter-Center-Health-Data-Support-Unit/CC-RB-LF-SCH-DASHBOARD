@@ -149,9 +149,9 @@ pop_data_max_sum <- pop_data %>% group_by(year,adm1_name,adm2_name) %>% summaris
 
 
 ############# START:: CURRENT DATA:: FOR CURRENT SITUATION MONITORING TAB ######
-
+latest_date <- max(RB_pre_post_compiled$date)
 current_data <- RB_pre_post_compiled %>%
-  filter(date == max(RB_pre_post_compiled$date)) %>%
+  filter(date == latest_date) %>%
   mutate(
   treated_vs_target = round(popn_treated_during_current_month/utg_treatment_target_for_each_round*100,2)
 )
@@ -162,7 +162,7 @@ current_data <- current_data %>% distinct(adm2_name,.keep_all = T) ### to remove
 spatial_data <- admin2_boundary %>%
   select(adm2_name= adm2_en)  %>% left_join(current_data)
 
-
+current_monitoring_title = glue::glue("{lubridate::month(latest_date,label=T, abbr=F)} {lubridate::year(latest_date)} - Current Program Status ")
 ## preparing base map
 
 # leaflet_map -------------------------------------------------------------
@@ -334,7 +334,7 @@ ui <- fluidPage(
     tabPanel("Current Situation Monitoring",
              column(width = 12,
                     br(),
-                    h4("Target achived during current month"),
+                    h4(current_monitoring_title),
                     hr(),
                     div(class = "outer",
                     tags$style(type = "text/css", ".outer {
@@ -344,7 +344,8 @@ ui <- fluidPage(
                     right: 0;
                     bottom: 0;
                     overflow: hidden;
-                    padding: 0}"),leafletOutput("map",height = "100%"))
+                    padding: 0}"),
+                    leafletOutput("map",height = "100%"))
 
                     # h4("Comming soon!")
 
