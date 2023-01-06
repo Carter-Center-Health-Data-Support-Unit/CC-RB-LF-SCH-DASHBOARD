@@ -24,7 +24,7 @@ targets::tar_load_everything()
 
 Good no cases where pop treated during current month is > total population
 ```{r}
-pop_treated_gt_total_pop<- RB_pre_post_compiled |> 
+pop_treated_gt_total_pop<- RB_pre_post_compiled |>
   filter(
     popn_treated_during_current_month>total_population
   )
@@ -57,7 +57,7 @@ rb_boxplot(.data = RB_pre_post_compiled,
 I think we should inspect the pop treated over time to make sure the numbers looks good. Alright, I like that, doesn't look lik numbers are getting repeated.
 
 ```{r}
-RB_pre_post_compiled |> 
+RB_pre_post_compiled |>
   ggplot(aes(x=date,y=popn_treated_during_current_month,color=adm2_name))+
   geom_point()+
   geom_line()+
@@ -127,8 +127,6 @@ RB_post201905_adm3 |>
 ```
 
 
-```
-
 
 Shold fin out a bit more about cumulative all_rounds
 ```{r}
@@ -170,5 +168,251 @@ rb_boxplot(.data = RB_adm2,
            y = "popn_treated_during_current_month",
            pop = "total_population" ,log = T)
 
+```
+
+## Carry over
+
+We know that sometimes there are cases where pop treated numbers in J-F-M appear to be carried over from previous year. It's unclear exactly how this is happening. We think that the December ones might be getting back filled? Here is a Viz where you can clearly see it occuring at the admin 2 level. 
+
+
+```{r}
+ggiraph::girafe()
+ggiraph::girafe(ggobj = heat_map_gg(RB_pre_post_compiled))
+```
+
+It appears to be occuring both in pre 2019-05 and post 2019-05 data. Therefore to identify the problematic entries we should look at both pre & post data sets (adm 2 & 3 levels). Lets' start with adm2
+
+I guess we should first Isolate the months of interest
+
+```{r}####```{r}
+```{r}
+```{r}
+#############################3
+# this is useful       
+
+#################################3
+# this is useful
+##################################
+RB_pre_post_compiled |> 
+    arrange(date) |>
+    group_by(year,
+             adm1_name,
+             adm2_name
+    ) |>
+    summarise(
+      treated_cumulative = cumsum(popn_treated_during_current_month),
+      utg_total = utg_2_treatment_target_for_the_whole_year,
+      date= unique(date),.groups = "keep"
+    ) |> 
+  summarise(
+    mincum=min(treated_cumulative),
+    maxcum=max(treated_cumulative),
+    pct= mincum/maxcum
+  ) |> 
+  filter(mincum>0) |> 
+  filter(pct>.75) |> 
+  print(n=21)
+
+
+
+max_cur_minus_min_pre <-  function(df){
+  years_unique <- c(2017:2022)
+  years_unique |> 
+    purrr::map_dfr(
+      ~{
+        prev_nov_dec <- df |> 
+          filter(year==.x-1) |> 
+          group_by(adm1_name , adm2_name) |> 
+          summarise(
+            treated_cumulative = cumsum(popn_treated_during_current_month),
+            date= lubridate::ymd(unique(date)),.groups = "keep"
+          ) |> 
+          summarise(
+            date= lubridate::ymd(unique(date)),.groups = "keep",
+            cum_compare=max(treated_cumulative),
+            # pct= mincum/maxcum
+          ) |> 
+          filter(lubridate::month(date) %in% c(11,12))
+        
+        curr_janfebmar <- df |> 
+          filter(year==.x) |> 
+          group_by(adm1_name , adm2_name) |> 
+          summarise(
+            treated_cumulative = cumsum(popn_treated_during_current_month),
+            date= lubridate::ymd(unique(date)),.groups = "keep"
+          ) |> 
+          summarise(
+            date= lubridate::ymd(unique(date)),.groups = "keep",
+            cum_compare=min(treated_cumulative)
+            
+          ) |> 
+             filter(lubridate::month(date) %in% c(1,2))
+        df_consec_months<-bind_rows(prev_nov_dec,curr_janfebmar)
+        df_consec_months |> 
+          mutate(
+
+          ) |> 
+          group_by(adm1_name, adm2_name) |> 
+          summarise(
+            date= unique(date),
+            min_cum = min(cum_compare),
+            year= lubridate::year(date),
+            diff_range= diff(range(cum_compare)),
+            date_set= .x
+            )
+      }
+      
+    )
+}
+
+
+
+
+year_comparisons<- max_cur_minus_min_pre(RB_pre_post_compiled)
+year_comparisons |>
+  filter(min_cum!=0) |> 
+  ggplot(aes(x=diff_range))+
+  geom_histogram(bins = 100)+
+  facet_wrap(~date_set)+
+  scale_x_log10(label=scales::comma)
+
+year_comparisons |>
+  filter(min_cum!=0) |> 
+  filter(diff_range<5000) |> 
+  rename(start_of_year=date_set) |> 
+  distinct(adm1_name,adm2_name,diff_range,start_of_year ) |> 
+  filter(!is.na(adm1_name)) |> 
+  arrange(adm1_name,adm2_name,start_of_year) |> 
+  select(-diff_range)
+
+#          
+#        
+#         mutate(
+#           treated_cumulative= sum(popn_treated_during_current_month),
+#         ) |> 
+#         group_by(adm1_name, adm2_name) |> 
+#         summarise(
+#           year= unique(year),
+#           year_prev= unique(year)-1,
+#           min_cum = min(treated_cumulative,na.rm=T),
+#           max_cum= max(treated_cumulative,na.rm=T)
+#         )
+#     ) |> 
+#     rlang::set_names(years_unique)
+# }
+max_cur_minus_min_pre(RB_pre_post_compiled)$`2021` |> print(n=30)
+
+
+RB_pre_post_compiled |> 
+  
+  filter(
+    !(date %in% lubridate::ymd(c("2016-01-01",
+                                 "2016-02-01",
+                                 "2016-03-01",
+                                 "2016-04-01")))
+  )   |>
+  mutate(prev_year= year -1) |> 
+  arrange(date) |>
+  
+    group_by(year,
+             adm1_name,
+             adm2_name
+    ) |>
+    mutate(
+      treated_cumulative = cumsum(popn_treated_during_current_month),
+      max_cum = max(treated_cumulative,na.rm=T),
+      min_cum = min(treated_cumulative,na.rm=T)
+      # utg_total = utg_2_treatment_target_for_the_whole_year,
+      # date= unique(date),.groups = "keep"
+    ) 
+
+
+RB_pre_post_compiled |> 
+  # group_by(year,
+  #          adm1_name,
+  #          adm2_name
+  # ) |>
+  filter(
+    !(date %in% lubridate::ymd(c("2016-01-01",
+                                 "2016-02-01",
+                                 "2016-03-01",
+                                 "2016-04-01")))
+  ) |>
+  mutate(
+    month_rev = ifelse(month == 12 ,1,month),
+    year_rev= ifelse(month==12, year+1,year)
+  ) |> 
+  group_by(year_rev,adm1_name,adm2_name) |> 
+  summarise(
+    diff_range = diff(range(popn_treated_during_current_month))
+  ) |> 
+  filter(diff_range< 10000) |> 
+  print(n=33)
+  
+  group_by(adm1_name,adm2_name) |>
+  mutate(
+    cum_lag = unique(max_treated_cum[year==year-1])
+  )
+  
+  select(matches("*cum*")) |> filter(adm2_name =="yem_special", year ==2018) |> glimpse()
+  filter(
+    date<="2019-05-01",
+    # issue can't apply to first year
+    !(date %in% lubridate::ymd(c("2016-01-01",
+                  "2016-02-01",
+                  "2016-03-01",
+                  "2016-04-01"))),
+    # month %in% c(12,1,2)
+  ) |> 
+  group_by(year) |> 
+  mutate(
+    
+  )
+  filter(adm2_name=="central_gondar")
+  mutate(
+    month=ifelse(month==12,0,month)
+  ) |> 
+  group_by(adm1_name,adm2_name,popn_treated_during_current_month) |>
+  count() |> 
+  filter(popn_treated_during_current_month!=0)
+  print(n=62)
+  filter(month == 12 | month == 01 | month == 02) %>%
+    filter(year[month == 12] == year[month == 01] - 1 &
+             year[month == 12] == year[month == 02] - 1)
+
+  # mutate(
+  #   res= seqid(12*as.yearmon(date))
+  # )
+
+
+lubridate::month()
+DF %>% 
+  group_by(group, result = seqid(12 * as.yearmon(date))) %>%
+  mutate(result = 1:n()) %>%
+  ungroup
+```
+
+
+
+
+```{r}
+  dat_p <- .dat |>
+    arrange(date) |>
+    group_by(year,
+             adm1_name,
+             adm2_name
+    ) |>
+    summarise(
+      treated_cumulative = cumsum(popn_treated_during_current_month),
+      utg_total = utg_2_treatment_target_for_the_whole_year,
+      date= unique(date),.groups = "keep"
+    ) |>
+    mutate(
+      updated_utg_total = utg_total[which(date==max(date))],
+      pct_treated_utg_total = treated_cumulative/updated_utg_total,
+      year = lubridate::year(date),
+      month= lubridate::month(date)
+    ) |>
+    filter(!is.na(adm2_name))
 ```
 
