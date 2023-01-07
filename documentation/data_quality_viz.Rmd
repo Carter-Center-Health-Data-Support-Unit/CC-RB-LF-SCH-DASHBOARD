@@ -215,47 +215,51 @@ RB_pre_post_compiled |>
 
 
 
-max_cur_minus_min_pre <-  function(df){
+max_cur_minus_min_pre <-  function(df,
+                                   group_level=c("adm1_name","adm2_name")){
   years_unique <- c(2017:2022)
+  group_level_sym <-  syms(group_level)
   years_unique |> 
     purrr::map_dfr(
       ~{
         prev_nov_dec <- df |> 
           filter(year==.x-1) |> 
-          group_by(adm1_name , adm2_name) |> 
+          group_by(!!!group_level_sym) |> 
           summarise(
             treated_cumulative = cumsum(popn_treated_during_current_month),
-            date= lubridate::ymd(unique(date)),.groups = "keep"
+            date= date
+            # date= lubridate::ymd(unique(date)),
+            # .groups = "keep"
           ) |> 
           summarise(
             date= lubridate::ymd(unique(date)),.groups = "keep",
-            cum_compare=max(treated_cumulative),
+            cum_compare=max(treated_cumulative,na.rm=T),
             # pct= mincum/maxcum
           ) |> 
           filter(lubridate::month(date) %in% c(11,12))
         
         curr_janfebmar <- df |> 
           filter(year==.x) |> 
-          group_by(adm1_name , adm2_name) |> 
-          summarise(
+          group_by(!!!group_level_sym) |> 
+          mutate(
             treated_cumulative = cumsum(popn_treated_during_current_month),
-            date= lubridate::ymd(unique(date)),.groups = "keep"
+            date= date
+            # date= lubridate::ymd(unique(date)),
+            # .groups = "keep"
           ) |> 
           summarise(
             date= lubridate::ymd(unique(date)),.groups = "keep",
-            cum_compare=min(treated_cumulative)
+            cum_compare=min(treated_cumulative,na.rm=T)
             
           ) |> 
              filter(lubridate::month(date) %in% c(1,2))
+        
         df_consec_months<-bind_rows(prev_nov_dec,curr_janfebmar)
         df_consec_months |> 
-          mutate(
-
-          ) |> 
-          group_by(adm1_name, adm2_name) |> 
+          group_by(!!!group_level_sym) |> 
           summarise(
             date= unique(date),
-            min_cum = min(cum_compare),
+            min_cum = min(cum_compare,na.rm=T),
             year= lubridate::year(date),
             diff_range= diff(range(cum_compare)),
             date_set= .x
@@ -269,7 +273,16 @@ max_cur_minus_min_pre <-  function(df){
 
 
 year_comparisons<- max_cur_minus_min_pre(RB_pre_post_compiled)
+year_comparisons_adm3<- max_cur_minus_min_pre(RB_post201905_adm3,
+                                         group_level = c("adm1_name","adm2_name","adm3_name"))
+
 year_comparisons |>
+  filter(min_cum!=0) |> 
+  ggplot(aes(x=diff_range))+
+  geom_histogram(bins = 100)+
+  facet_wrap(~date_set)+
+  scale_x_log10(label=scales::comma)
+year_comparisons_adm3 |>
   filter(min_cum!=0) |> 
   ggplot(aes(x=diff_range))+
   geom_histogram(bins = 100)+
@@ -284,6 +297,19 @@ year_comparisons |>
   filter(!is.na(adm1_name)) |> 
   arrange(adm1_name,adm2_name,start_of_year) |> 
   select(-diff_range)
+
+year_comparisons_adm3 |>
+  filter(min_cum!=0) |> 
+  filter(diff_range<5000) |> 
+  rename(start_of_year=date_set) |> 
+  distinct(adm1_name,adm2_name,diff_range,start_of_year ) |> 
+  filter(!is.na(adm1_name)) |> 
+  arrange(adm1_name,adm2_name,start_of_year) |> 
+  select(-diff_range)
+
+targets::tar_load_everything(
+  
+)
 
 #          
 #        
