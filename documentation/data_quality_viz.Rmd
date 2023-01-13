@@ -184,8 +184,8 @@ It appears to be occuring both in pre 2019-05 and post 2019-05 data. Therefore t
 
 I guess we should first Isolate the months of interest
 
-```{r}####```{r}
-```{r}
+
+
 ```{r}
 #############################3
 # this is useful       
@@ -289,6 +289,9 @@ year_comparisons_adm3 |>
   facet_wrap(~date_set)+
   scale_x_log10(label=scales::comma)
 
+
+# these are adm2 level, but after may 2019 everything was 
+# admin 3.. therefore the problem shoudl be adm3 after may 2019
 year_comparisons |>
   filter(min_cum!=0) |> 
   filter(diff_range<5000) |> 
@@ -298,7 +301,17 @@ year_comparisons |>
   arrange(adm1_name,adm2_name,start_of_year) |> 
   select(-diff_range)
 
-year_comparisons_adm3 |>
+adm2_spillover_identified <- year_comparisons |>
+  filter(min_cum!=0) |> 
+  filter(diff_range<5000) |> 
+  rename(start_of_year=date_set) |> 
+  distinct(adm1_name,adm2_name,diff_range,start_of_year ) |> 
+  filter(!is.na(adm1_name)) |> 
+  arrange(adm1_name,adm2_name,start_of_year) |> 
+  select(-diff_range) %>% 
+  filter(start_of_year <=2019)
+
+adm3_spillovers_identified <- year_comparisons_adm3 |>
   filter(min_cum!=0) |> 
   filter(diff_range<5000) |> 
   rename(start_of_year=date_set) |> 
@@ -306,11 +319,49 @@ year_comparisons_adm3 |>
   filter(!is.na(adm1_name)) |> 
   arrange(adm1_name,adm2_name,start_of_year) |> 
   select(-diff_range)
+```
 
-targets::tar_load_everything(
-  
-)
 
+let's see if we can somehow double check with a viz
+```{r}
+
+clip <- pipe("pbcopy", "w")                       
+write.table(adm2_spillover_identified, file=clip, sep = '\t', row.names = FALSE)                               
+close(clip)
+ 
+eth_master_adm %>% 
+  filter(
+  str_detect(adm3_en,"qu")
+  )
+
+
+debugonce(extract_pre_clean_names_adms_batch)
+what <- extract_pre_clean_names_adms_batch(df_list =RB_post201905_df_ls,
+                                           data_format = "current" ) %>% suppressMessages()
+
+
+
+RB_post201905_adm3 %>% 
+  filter(adm1_name =="amhara", year %in% c(2020,2021), month %in% c(11,12,1))
+
+
+RB_pre201905_adm2 %>% 
+  filter(year %in% c(2017,2018), month %in% c(9,10,11,12,1,2), adm2_name =="yem_special")
+
+
+adm2_spillover_identified %>% write.table(., "clipboard", sep="\t",mode="r")
+
+
+
+RB_post201905_adm3 %>% 
+  # filter(adm3_name %in% adm3_spillovers_identified$adm3_name,
+  #        year>=2019) %>% 
+  filter(adm1_name =="gambela") %>% 
+  ggplot(aes(x= date, y= popn_treated_during_current_month))+
+  geom_line(aes(color=adm3_name)) +
+  geom_point(aes(color=adm3_name))
+
+RB_pre201905_adm2
 #          
 #        
 #         mutate(

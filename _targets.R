@@ -61,6 +61,7 @@ list(
   # Clean RB (Post) ------------------------------------------------------
   # initial cleaning. First do for current format data
   # grab top table, clean admin names, drop summary rows
+
   tar_target(
     name = RB_post201905_df_ls_clean1,
     command = extract_pre_clean_names_adms_batch(df_list =RB_post201905_df_ls,data_format = "current" )
