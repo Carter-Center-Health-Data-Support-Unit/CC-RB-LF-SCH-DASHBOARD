@@ -5,6 +5,8 @@
 
 # Load packages required to define the pipeline:
 library(targets)
+library(lubridate)
+library(tidyverse)
 # library(tarchetypes) # Load other packages as needed. # nolint
 
 # Set target options:
@@ -67,9 +69,17 @@ list(
     command = extract_pre_clean_names_adms_batch(df_list =RB_post201905_df_ls,data_format = "current" )
   ),
   tar_target(
-    name = RB_post201905_adm3,
+    name = RB_post201905_adm3_compiled,
     command = bind_rows_add_dates_fill_pop(df_list =RB_post201905_df_ls_clean1,data_format = "current")
   ),
+  tar_target(name=RB_post201905_adm3_dedup,
+             command=deduplicate(df=RB_post201905_adm3_compiled,adm1_name,adm2_name,adm3_name,date)
+               ),
+
+  tar_target(name=RB_post201905_adm3,
+             command=fix_spillovers(RB_post201905_adm3_dedup,"popn_treated_during_current_month",adm1_name,adm2_name,adm3_name,year)
+               ),
+
   # we need to make two data sets from current: a.) admin 2 level (for binding with old), admin 3 level
   tar_target(
     name = RB_post201905_adm2,

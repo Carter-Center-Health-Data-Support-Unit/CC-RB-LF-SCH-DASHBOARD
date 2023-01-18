@@ -130,7 +130,9 @@ RB_post201905_adm3 |>
 
 Shold fin out a bit more about cumulative all_rounds
 ```{r}
-RB_adm2 |> 
+
+
+RB_pre_post_compiled |> 
   filter(
     popn_treated_cumulative_all_rounds>total_population
   )
@@ -322,8 +324,8 @@ adm3_spillovers_identified <- year_comparisons_adm3 |>
 ```
 
 
-let's see if we can somehow double check with a viz
-```{r}
+here i'm checking and writing out tables for an email
+```{r, eval = F}
 
 clip <- pipe("pbcopy", "w")                       
 write.table(adm2_spillover_identified, file=clip, sep = '\t', row.names = FALSE)                               
@@ -333,141 +335,24 @@ eth_master_adm %>%
   filter(
   str_detect(adm3_en,"qu")
   )
-
-
-debugonce(extract_pre_clean_names_adms_batch)
-what <- extract_pre_clean_names_adms_batch(df_list =RB_post201905_df_ls,
-                                           data_format = "current" ) %>% suppressMessages()
-
-
-
-RB_post201905_adm3 %>% 
-  filter(adm1_name =="amhara", year %in% c(2020,2021), month %in% c(11,12,1))
-
-
-RB_pre201905_adm2 %>% 
-  filter(year %in% c(2017,2018), month %in% c(9,10,11,12,1,2), adm2_name =="yem_special")
-
-
-adm2_spillover_identified %>% write.table(., "clipboard", sep="\t",mode="r")
-
-
-
-RB_post201905_adm3 %>% 
-  # filter(adm3_name %in% adm3_spillovers_identified$adm3_name,
-  #        year>=2019) %>% 
-  filter(adm1_name =="gambela") %>% 
-  ggplot(aes(x= date, y= popn_treated_during_current_month))+
-  geom_line(aes(color=adm3_name)) +
-  geom_point(aes(color=adm3_name))
-
-RB_pre201905_adm2
-#          
-#        
-#         mutate(
-#           treated_cumulative= sum(popn_treated_during_current_month),
-#         ) |> 
-#         group_by(adm1_name, adm2_name) |> 
-#         summarise(
-#           year= unique(year),
-#           year_prev= unique(year)-1,
-#           min_cum = min(treated_cumulative,na.rm=T),
-#           max_cum= max(treated_cumulative,na.rm=T)
-#         )
-#     ) |> 
-#     rlang::set_names(years_unique)
-# }
-max_cur_minus_min_pre(RB_pre_post_compiled)$`2021` |> print(n=30)
-
-
-RB_pre_post_compiled |> 
-  
-  filter(
-    !(date %in% lubridate::ymd(c("2016-01-01",
-                                 "2016-02-01",
-                                 "2016-03-01",
-                                 "2016-04-01")))
-  )   |>
-  mutate(prev_year= year -1) |> 
-  arrange(date) |>
-  
-    group_by(year,
-             adm1_name,
-             adm2_name
-    ) |>
-    mutate(
-      treated_cumulative = cumsum(popn_treated_during_current_month),
-      max_cum = max(treated_cumulative,na.rm=T),
-      min_cum = min(treated_cumulative,na.rm=T)
-      # utg_total = utg_2_treatment_target_for_the_whole_year,
-      # date= unique(date),.groups = "keep"
-    ) 
-
-
-RB_pre_post_compiled |> 
-  # group_by(year,
-  #          adm1_name,
-  #          adm2_name
-  # ) |>
-  filter(
-    !(date %in% lubridate::ymd(c("2016-01-01",
-                                 "2016-02-01",
-                                 "2016-03-01",
-                                 "2016-04-01")))
-  ) |>
-  mutate(
-    month_rev = ifelse(month == 12 ,1,month),
-    year_rev= ifelse(month==12, year+1,year)
-  ) |> 
-  group_by(year_rev,adm1_name,adm2_name) |> 
-  summarise(
-    diff_range = diff(range(popn_treated_during_current_month))
-  ) |> 
-  filter(diff_range< 10000) |> 
-  print(n=33)
-  
-  group_by(adm1_name,adm2_name) |>
-  mutate(
-    cum_lag = unique(max_treated_cum[year==year-1])
-  )
-  
-  select(matches("*cum*")) |> filter(adm2_name =="yem_special", year ==2018) |> glimpse()
-  filter(
-    date<="2019-05-01",
-    # issue can't apply to first year
-    !(date %in% lubridate::ymd(c("2016-01-01",
-                  "2016-02-01",
-                  "2016-03-01",
-                  "2016-04-01"))),
-    # month %in% c(12,1,2)
-  ) |> 
-  group_by(year) |> 
-  mutate(
-    
-  )
-  filter(adm2_name=="central_gondar")
-  mutate(
-    month=ifelse(month==12,0,month)
-  ) |> 
-  group_by(adm1_name,adm2_name,popn_treated_during_current_month) |>
-  count() |> 
-  filter(popn_treated_during_current_month!=0)
-  print(n=62)
-  filter(month == 12 | month == 01 | month == 02) %>%
-    filter(year[month == 12] == year[month == 01] - 1 &
-             year[month == 12] == year[month == 02] - 1)
-
-  # mutate(
-  #   res= seqid(12*as.yearmon(date))
-  # )
-
-
-lubridate::month()
-DF %>% 
-  group_by(group, result = seqid(12 * as.yearmon(date))) %>%
-  mutate(result = 1:n()) %>%
-  ungroup
 ```
+
+How can we rectify these in the data?
+```{r}
+
+
+id_spillovers(RB_post201905_adm3_dedup,x = "popn_treated_during_current_month",grp_vars = c("adm1_name","adm2_name","adm3_name","year"))
+
+id_spillovers(RB_pre201905_adm2,
+              x = "popn_treated_during_current_month",grp_vars = c("adm1_name","adm2_name","year"))
+
+
+
+
+  
+```
+
+
 
 
 

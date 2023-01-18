@@ -657,6 +657,13 @@ bind_rows_add_dates_fill_pop <-  function(df_list, data_format= "current"){
 }
 
 
+deduplicate <- function(df,...){
+  df %>%
+    group_by(...) %>%
+    slice(1) %>%
+    ungroup()
+}
+
 
 
 
