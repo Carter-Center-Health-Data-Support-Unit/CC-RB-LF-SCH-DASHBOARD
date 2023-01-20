@@ -1,0 +1,140 @@
+---
+title: "Data Quality Visuals"
+output: html_document
+date: "2023-01-18"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = F,include = F)
+```
+
+
+```{r cars}
+library(targets)
+library(tidyverse)
+tar_load_everything()
+lapply(list.files("R", full.names = TRUE, recursive = TRUE), source)
+```
+
+## Overview
+
+### yearly % treated
+
+The current dashboard has a heatchart like this showing % treated year (cumulative treated/utg). From the heat chart it's clear that there are data quality issues.
+
+```{r, include=T,results='asis'}
+# debugonce(heat_map_gg)
+b4_fixing <- heat_map_gg_cum_adm2(.dat = RB_pre_post_compiled,x = "popn_treated_during_current_month",grp_vars = c("year","adm1_name","adm2_name"),date_col = "date")+
+  ggtitle("heat chart - % pop treated by month",subtitle = "before attempting to fix spill over")
+
+ggiraph::girafe(ggobj = b4_fixing)
+```
+
+Might want to move this code later... but i'm going to make a name patch
+```{r}
+# RB_pre_post_compiled %>% 
+#   mutate(
+#     adm2_name = case_when(adm2_name=="")
+#   )
+
+```
+
+I tried fixing the spillover affects based on various set rules/algorithms, but it didn't work. It seems there are too many different ways the spillover could occur and reasons that I don't understand. Therefore, I think we might have to go with a more manual approach.
+
+The above visual is interesting and potentially useful especially as a more final visual once the data is properly cleaned however. I think it could be more useful to make similar plot just showing the monthly treated values at the different admin levels
+
+```{r, eval=F, include=F,results='asis'}
+
+
+# In order to fix:  I reset Jan, Feb, and March monthly treated numbers to 0 if they were with 5 % of the most recent treated number of the previous year (including October, November, December).
+
+# IF you look at `ilu_aba_boar` in year 2017 you see that 1.36 M treated in June.
+
+
+# *central_gondar* month 1 2020 --- that's probably the remaining 50%. should just do at admin 3 level¬
+
+after_fixing <- heat_map_gg(.dat = RB_pre_post_compiled,
+                            x = "popn_treated_during_current_month_fix",
+                            grp_vars = c("year","adm1_name","adm2_name"),date_col = "date")+
+    ggtitle("heat chart - % pop treated by month",subtitle = "after attempting to fix spill over")
+
+ggiraph::girafe(ggobj = after_fixing
+                # ,width_svg = 16, height_svg =5
+                )
+```
+
+
+## monthly treatement values
+
+Okay I've changed the aesthetics to try to make some points more clear.
+
+Below I've plotted the population treated per admin of interest per month. `dark grey` represents months when that admin zone was missing from the data. This can be fixed -- I can add those admins with 0 pop treated for those dates, but leaving it like this for now because perhaps it could be useful for identifying operational name adjustments/changes.
+
+### Admin 2 (zone) levle
+
+If you hover over the differnt tiles you notice there are some columns of tiles that have no hover... these are missing files we see them here:
+
+- "2017-08"
+- "2017-09"
+- "2017-11"
+- "2018-05"
+- "2019-03"
+
+```{r, include=T, results="asis"}
+plot_heat_monthly_adm2 <- RB_pre_post_compiled %>% 
+  filter(date<"2019-05-01") %>% 
+  summarise_ploting_stats(x ="popn_treated_during_current_month",
+                          grp_vars = c("year","adm1_name","adm2_name"),
+                          date_col = "date") %>%
+  complete(nesting(adm1_name,adm2_name),date, fill = list(popn_treated_during_current_month=NA)) %>% 
+  heat_map_gg(x = date, y=adm2_name,
+              fill = popn_treated_during_current_month,
+              facet_var = adm1_name)
+
+ggiraph::girafe(ggobj = plot_heat_monthly_adm2
+                # ,width_svg = 16, height_svg =5
+                )
+
+# RB_pre_post_compiled %>% 
+#   filter(date=="2017-08-01")
+```
+
+
+### Admin 3 (ward) level
+
+this will be fun... heres a gigantic chart :-)
+
+
+We can see the following files are missing:
+
+- "2019-12" , 
+- "2021-02",
+- "2022-06",
+- "2022-07"
+
+```{r, include=T, results="asis"}
+plot_heat_monthly_adm3 <- RB_post201905_adm3 %>% 
+  filter(date>="2019-05-01") %>% 
+  summarise_ploting_stats(x ="popn_treated_during_current_month",
+                          grp_vars = c("year","adm1_name","adm2_name","adm3_name"),
+                          date_col = "date") %>%
+  complete(nesting(adm1_name,adm2_name,adm3_name),date, fill = list(popn_treated_during_current_month=NA)) %>% 
+  heat_map_gg(x = date, 
+              y=adm3_name,
+              fill = popn_treated_during_current_month,
+              facet_var = adm2_name)+
+  theme(
+  # axis.text.x = element_text(angle = 90),  
+  text = element_text(size= 15)
+  # axis.title.y = element_text(size=13)
+  )
+  
+
+
+ggiraph::girafe(ggobj = plot_heat_monthly_adm3
+                ,width_svg = 16, height_svg =64
+                )
+
+```
+
+

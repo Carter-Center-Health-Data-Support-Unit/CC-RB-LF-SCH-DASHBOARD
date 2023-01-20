@@ -69,27 +69,13 @@ rb_boxplot <- function(.data,
   return(p3)
 
 }
-# dat_latest_year <- RB_pre_post_compiled |>
-#   filter(lubridate::year(date)==lubridate::year(latest_date))
-#
-#
-# dat_p_treated_by_utg |>
-#   ggplot(aes(x=date, y=percent_treated_utg_total, color=adm2_name,group=adm2_name))+
-#   geom_line()+
-#   geom_point()+
-#   facet_wrap(~adm1_name)+
-#   theme(
-#     legend.position = "none",
-#     panel.background = element_rect(fill = "white",
-#                                     colour = "black",
-#                                     size = 0.5, linetype = "solid")
-#   )
 
-
-
-heat_map_gg <- function(.dat, date_col="date"){
-
-  dat_p <- .dat |>
+plot_utg_remaining_year <-  function(.dat=RB_pre_post_compiled){
+  latest_date <- max(.dat$date)
+  plot_title <- glue::glue("Treatments remaining in {lubridate::year(latest_date)}")
+  dat_latest_year <- .dat |>
+    filter(lubridate::year(date)==lubridate::year(latest_date))
+  p_date_latest_date <- dat_latest_year |>
     arrange(date) |>
     group_by(year,
              adm1_name,
@@ -101,6 +87,82 @@ heat_map_gg <- function(.dat, date_col="date"){
       date= unique(date),.groups = "keep"
     ) |>
     mutate(
+      updated_utg_total = utg_total[which(date==max(date))],
+      utg_year_remain = updated_utg_total-treated_cumulative,
+      year = lubridate::year(date),
+      month= lubridate::month(date)
+    ) |>
+    filter(!is.na(adm2_name)) |>
+    filter(date==latest_date)
+  p_date_latest_date |>
+    ggplot(aes(x=reorder(adm2_name,utg_year_remain),
+               utg_year_remain, fill= adm1_name))+
+    geom_bar(stat="identity")+
+    scale_fill_brewer(palette = "Dark2")+
+    scale_y_continuous(breaks = c(5e3,100e3, 500e3, 1e6, 3e6),
+                       labels=abbreviate_large_numbers(c(5e3,100e3, 500e3, 1e6, 3e6)))+
+    labs(y="Remaining Treatments (2022)")+
+    coord_flip()+
+    theme(
+      axis.title.y = element_blank(),
+      axis.text.x= element_text(angle=90),
+      panel.background = element_rect(fill='transparent'), #transparent panel bg
+      plot.background = element_rect(fill='transparent', color=NA),
+      legend.background = element_rect(fill='transparent'), #transparent legend bg
+      legend.box.background = element_rect(fill='transparent')
+    )
+}
+
+
+
+
+
+
+
+
+abbreviate_large_numbers <- function(tx) {
+  div <- findInterval(as.numeric(gsub("\\,", "", tx)),
+                      c(0, 1e3, 1e6, 1e9, 1e12) )  # modify this if negative numbers are possible
+  paste(round( as.numeric(gsub("\\,","",tx))/10^(3*(div-1)), 2),
+        c("","K","M","B","T")[div] )}
+
+
+summarise_ploting_stats <- function(.dat,x,grp_vars=c("year","adm1_name","adm2_name"), date_col="date"){
+  grp_var_syms <-  syms(c(grp_vars,date_col))
+  dat_p <- .dat |>
+    arrange(date) |>
+    group_by(!!!grp_var_syms) |>
+    summarise(
+      !!x := sum(!!sym(x),na.rm=T),
+      utg_total = utg_2_treatment_target_for_the_whole_year,
+      .groups = "drop_last"
+    ) |>
+    mutate(
+      treated_cumulative = cumsum(!!sym(x)),
+      updated_utg_total = utg_total[which(date==max(date))],
+      pct_treated_utg_total = treated_cumulative/updated_utg_total,
+      year = lubridate::year(date),
+      month= lubridate::month(date)
+    ) |>
+    ungroup() %>%
+    filter(!is.na(adm2_name))
+  return(dat_p)
+}
+
+
+heat_map_gg_cum_adm2 <- function(.dat,x,grp_vars=c("year","adm1_name","adm2_name"), date_col="date"){
+
+  grp_var_syms <-  syms(c(grp_vars,date_col))
+  dat_p <- .dat |>
+    arrange(date) |>
+    group_by(!!!grp_var_syms) |>
+    summarise(
+      treated_sum = sum(!!sym(x),na.rm=T),
+      utg_total = utg_2_treatment_target_for_the_whole_year,
+      .groups = "drop_last"
+    ) |>
+    mutate(
+      treated_cumulative = cumsum(treated_sum),
       updated_utg_total = utg_total[which(date==max(date))],
       pct_treated_utg_total = treated_cumulative/updated_utg_total,
       year = lubridate::year(date),
@@ -140,16 +202,12 @@ heat_map_gg <- function(.dat, date_col="date"){
       legend.key.width = unit(3,"line"),
       legend.key.height = unit(1,"line"),
       legend.text = element_text(size = 12),
-      # text= element_text(family = "TT Arial"),
-      # text = element_text(size = 10, family = "roboto"),
-      # legend.box.margin=margin(-10,-10,-10,-10),
       axis.title.x = element_blank(),
       axis.text.x = element_text(angle = 90),
       axis.title.y = element_blank(),
       panel.spacing = unit(0, "lines"),
       strip.background = element_blank(),
       strip.placement = "left"
-
     )+
     guides(fill = guide_legend(label.position = "bottom",nrow=1))
 
@@ -161,21 +219,113 @@ heat_map_gg <- function(.dat, date_col="date"){
                                                              Zone: {adm2_name}<br>
                                                              Year: {year}<br>
                                                              Month: {month}<br>
+                                                             Monthly treated: {abbreviate_large_numbers(treated_sum)}<br>
+                                                             Yearly cumulative ({year}): {abbreviate_large_numbers(treated_cumulative)}<br>
                                                              % goal treated: {round(pct_treated_utg_total*100,1)}<br>",
 
                                          )),color="grey")+
       geom_vline(xintercept = lubridate::ymd(c(
-        "2017-01-01",
-        "2018-01-01",
-        "2019-01-01",
-        "2020-01-01",
-        "2021-01-01",
-        "2022-01-01")))
+        "2016-12-31",
+        "2017-12-31",
+        "2018-12-31",
+        "2019-12-31",
+        "2020-12-31",
+        "2021-12-31"
+        )))
 
   return(pf)
 }
 
 
+heat_map_gg <- function(.dat,x,y,fill,facet_var){
+
+  p_base <- .dat |>
+    ggplot2::ggplot()+
+    # scale_fill_continuous()+
+    scale_fill_gradient(low = "lightyellow",
+                         high = "darkred")+
+    # scale_fill_gradient(low="yellow" , high="red",na.value = "darkgrey")+
+    # gghdx::scale_fill_gradient_hdx_tomato(
+    #   # breaks= seq(0,max(dat),by=0.1),
+    #   breaks= seq(0,1e6, by=1e4)
+    #   # label=scales::percent
+    #   )+
+    ggplot2::scale_x_date(
+      date_breaks = "3 months",
+      date_minor_breaks = "1 month",
+      date_labels = "%b-%y",expand = c(0,0)
+      )+
+    ggplot2::theme_bw()+
+    ggplot2::facet_grid(rows = vars({{facet_var}}),
+                        switch = "both",
+                        scales = "free",
+                        space = "free"
+    ) +
+    ggplot2::theme(
+      legend.position = "none",
+      legend.title = element_blank(),
+      legend.margin=margin(0,0,0,0),
+      legend.key.width = unit(3,"line"),
+      legend.key.height = unit(1,"line"),
+      legend.text = element_text(size = 12),
+      axis.title.x = element_blank(),
+      axis.text.x = element_text(angle = 90),
+      axis.title.y = element_blank(),
+      panel.spacing = unit(0, "lines"),
+      strip.background = element_blank(),
+      strip.placement = "left"
+    )+
+    guides(fill = guide_legend(label.position = "bottom",nrow=1))
+
+  pf <- p_base+
+    ggiraph::geom_tile_interactive(aes(x= {{x}},
+                                       y= {{y}},
+                                       fill={{fill}},
+                                       tooltip= glue::glue("Region: {adm1_name}<br>
+                                                             Zone: {adm2_name}<br>
+                                                             Year: {year}<br>
+                                                             Month: {month}<br>
+                                                             Monthly treated: {abbreviate_large_numbers(popn_treated_during_current_month)}<br>
+                                                             Yearly cumulative ({year}): {abbreviate_large_numbers(treated_cumulative)}<br>
+                                                             % goal treated: {round(pct_treated_utg_total*100,1)}<br>",
+
+                                       )),color="grey")+
+    geom_vline(xintercept = lubridate::ymd(c(
+      "2016-12-31",
+      "2017-12-31",
+      "2018-12-31",
+      "2019-12-31",
+      "2020-12-31",
+      "2021-12-31"
+    )))
+
+  return(pf)
+
+
+}
+
+
+# RB_pre_post_compiled |>
+#   group_by(adm1_name,adm2_name) |>
+#   summarise(
+#     date= unique(date),
+#     total_treatments = cumsum(popn_treated_during_current_month)
+#   ) |>
+#   ggplot(
+#     aes(x= date, y=total_treatments, color =adm2_name)
+#   )+
+#   geom_point()+ geom_line()
+#
+# RB_pre_post_compiled |>
+#   group_by(adm1_name,date) |>
+#   summarise(
+#     total_treatments = sum(popn_treated_during_current_month,na.rm=T)
+#   ) |>
+#   mutate(
+#     cumulative_treatment= cumsum(total_treatments)
+#   ) |>
+#   ggplot(aes(x= date, y= cumulative_treatment, color = adm1_name))+
+#   geom_line()
 
 
 

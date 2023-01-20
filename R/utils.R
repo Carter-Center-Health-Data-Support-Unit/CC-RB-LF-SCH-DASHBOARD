@@ -28,7 +28,7 @@ compile_tab <-  function(folder_path, which_tabs = c("RB_rx"), skip=1){
         sheet_names<- readxl::excel_sheets(.x)
         soi<- stringr::str_subset(sheet_names,pattern = sel_tabs)
         if(length(soi)>0){
-          return(readxl::read_excel(.x,sheet = soi,skip = skip) )
+          return( suppressMessages( readxl::read_excel(.x,sheet = soi,skip = skip)))
         }
       }
     ) |>

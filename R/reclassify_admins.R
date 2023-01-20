@@ -47,7 +47,7 @@ sep_adm_2_3 <-  function(df){
 sanitize_admins <-  function(df){
   df |>
     mutate(
-      across(.cols = matches("adm\\d"),~clean_vec_names(.x))
+      across(.cols = matches("adm\\d"),~snakecase::to_any_case(.x) %>% snakecase::to_any_case())
     )
 }
 
@@ -384,6 +384,7 @@ clean_adm3 <- function(df){
 
       TRUE~ adm3_name
     ),
+    adm3_name = snakecase::to_any_case(adm3_name),
     adm_1_2_3=  glue::glue("{adm1_name}-{adm2_name}-{adm3_name}")
 
   )
@@ -469,12 +470,14 @@ drop_summary_rows <-  function(df,data_format="current"){
 
 
 clean_names_and_admins <-  function(df,data_format="current"){
-  df |>
+  df_san_initial <- df |>
     janitor::clean_names() |>
     standardize_admin_names(data_format = data_format)|>
     drop_summary_rows() |>
     sep_adm_2_3() |>
-    sanitize_admins() |>
+    sanitize_admins()
+
+  df_san_initial|>
     clean_adm1() |>
     clean_adm2() |>
     clean_adm3() |>
@@ -629,8 +632,9 @@ bind_rows_add_dates_fill_pop <-  function(df_list, data_format= "current"){
     ) |>
     dplyr::mutate(
       across(everything(), ~as.character(.x))
-    ) |>
-    readr::type_convert( ) |>
+    )
+
+  w_dates <- suppressMessages(readr::type_convert(w_dates))|>
     dplyr::mutate(
       active_villages_for_the_year =as.numeric(active_villages_for_the_year),
       total_population= dplyr::if_else(is.na(total_popn_census),total_popn_projected,total_popn_census)
@@ -653,6 +657,13 @@ bind_rows_add_dates_fill_pop <-  function(df_list, data_format= "current"){
   return(res)
 }
 
+
+deduplicate <- function(df,...){
+  df %>%
+    group_by(...) %>%
+    slice(1) %>%
+    ungroup()
+}
 
 
 

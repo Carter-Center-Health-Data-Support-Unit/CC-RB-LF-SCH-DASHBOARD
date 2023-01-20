@@ -5,3 +5,5 @@
 scrap_notes.Rmd
 *.csv
 *.xlsx
+*.html
+**/.DS_Store
