@@ -60,9 +60,10 @@ extract_top_table <-  function(df){
 #'
 #' @examples
 parse_top_table <-  function(df){
-  df |>
-    extract_top_table() |>
-    readr::type_convert()
+  df_top <- df |>
+    extract_top_table()
+
+    suppressMessages(readr::type_convert(df_top))
 
 }
 

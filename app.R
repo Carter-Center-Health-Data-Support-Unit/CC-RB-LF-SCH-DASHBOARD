@@ -17,9 +17,12 @@ options(scipen = 999)
 
 # load data
 tar_load(RB_pre_post_compiled) ### pre and post admin 2 level data
+# RB_pre_post_compiled <- RB_pre_post_compiled %>%
+#   mutate(popn_treated_during_current_month=popn_treated_during_current_month_fix)
+
+
 
 #### fixing Admin 2 boundary name
-
 
 ### read ocha boundary
 
@@ -170,7 +173,7 @@ spatial_data <- admin2_boundary %>%
 
 current_monitoring_title = glue::glue("{lubridate::month(latest_date,label=T, abbr=F)} {lubridate::year(latest_date)} - Current Program Status ")
 
-plot_heatchart <-  heat_map_gg(.dat =RB_pre_post_compiled,date_col = "date" )
+plot_heatchart <-   heat_map_gg_cum_adm2(.dat = RB_pre_post_compiled,x = "popn_treated_during_current_month",grp_vars = c("year","adm1_name","adm2_name"),date_col = "date")
 bar_plot_utg_remain <- plot_utg_remaining_year(.dat = RB_pre_post_compiled)
 ## preparing base map
 

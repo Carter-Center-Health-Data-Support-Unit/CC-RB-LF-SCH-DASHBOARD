@@ -30,7 +30,10 @@ root_dir <- Sys.getenv("CC_RB_LF_SCH_MONTHLY")
 data_dir <- glue::glue("{root_dir}/ETH/data_raw/")
 # Replace the target list below with your own:
 
+
 list(
+
+  # targets::tar_target(f)
   # Load/track Inputs ------------------------------------------------------------
   # compile current format RB rx tabs into list of dfs
   tar_target(RB_post201905_df_ls,
@@ -77,7 +80,7 @@ list(
                ),
 
   tar_target(name=RB_post201905_adm3,
-             command=fix_spillovers(RB_post201905_adm3_dedup,"popn_treated_during_current_month",adm1_name,adm2_name,adm3_name,year)
+             command=fix_spillovers(RB_post201905_adm3_dedup,"popn_treated_during_current_month",grp_vars =c("adm1_name","adm2_name","adm3_name","year"))
                ),
 
   # we need to make two data sets from current: a.) admin 2 level (for binding with old), admin 3 level
@@ -107,9 +110,14 @@ list(
                                                    lookup_fixed = F)
   ),
   # check implications of this, but i think just smoothes out/cleans up some potential duplicate issues?
+  # one thing i noted is that metekel dam workers & metekel admin 2 gets summed here... i think that seems okay at adm2 level?
+  tar_target(
+    name = RB_pre201905_to_adm2,
+    command= summarise_to_adm2(RB_pre201905_df_compiled)
+  ),
   tar_target(
     name = RB_pre201905_adm2,
-    command= summarise_to_adm2(RB_pre201905_df_compiled)
+    command= fix_spillovers(RB_pre201905_to_adm2,x ="popn_treated_during_current_month",grp_vars = c("adm1_name","adm2_name","year") )
   ),
 
 # RB Merge Pre & Post -----------------------------------------------------

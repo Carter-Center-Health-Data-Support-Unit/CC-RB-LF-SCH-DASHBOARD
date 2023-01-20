@@ -632,8 +632,9 @@ bind_rows_add_dates_fill_pop <-  function(df_list, data_format= "current"){
     ) |>
     dplyr::mutate(
       across(everything(), ~as.character(.x))
-    ) |>
-    readr::type_convert( ) |>
+    )
+
+  w_dates <- suppressMessages(readr::type_convert(w_dates))|>
     dplyr::mutate(
       active_villages_for_the_year =as.numeric(active_villages_for_the_year),
       total_population= dplyr::if_else(is.na(total_popn_census),total_popn_projected,total_popn_census)

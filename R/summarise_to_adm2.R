@@ -4,6 +4,7 @@ summarise_to_adm2 <- function(df=RB_post201905_df_compiled
 ){
     sum_cols = c(
       "popn_treated_during_current_month",
+      "popn_treated_during_current_month_fix",
       "utg_treatment_target_for_each_round",
       "utg_2_treatment_target_for_the_whole_year",
       "total_popn_projected",

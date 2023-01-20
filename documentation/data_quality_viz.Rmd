@@ -340,12 +340,37 @@ eth_master_adm %>%
 How can we rectify these in the data?
 ```{r}
 
+RB_post201905_adm3$popn_treated_during_current_month_fix
+RB_post201905_adm3$popn_treated_during_current_month
+RB_pre_post_compiled$popn_treated_during_current_month
+RB_pre_post_compiled$popn_treated_during_current_month_fix
 
+
+tar_load_everything()
+RB_pre201905_df_compiled %>% 
+  group_by(adm1_name,adm2_name,date) %>% 
+  filter(n()>1) %>% 
+  distinct(year,month )
+  print(n=nrow(.))
+
+RB_pre201905_adm2 %>%
+  group_by(adm1_name,adm2_name,date) %>% 
+  filter(n()>1)
+  
+
+debugonce(id_spillovers)
 id_spillovers(RB_post201905_adm3_dedup,x = "popn_treated_during_current_month",grp_vars = c("adm1_name","adm2_name","adm3_name","year"))
 
-id_spillovers(RB_pre201905_adm2,
+fix_spillovers(RB_post201905_adm3_dedup,x = "popn_treated_during_current_month",grp_vars = c("adm1_name","adm2_name","adm3_name","year")) %>% glimpse()
+
+
+debugonce(id_spillovers)
+id_spillovers(RB_pre201905_to_adm2,
+              x = "popn_treated_during_current_month",grp_vars = c("adm1_name","adm2_name","year"))
+fix_spillovers(RB_pre201905_to_adm2,
               x = "popn_treated_during_current_month",grp_vars = c("adm1_name","adm2_name","year"))
 
+RB_pre201905_adm2$popn_treated_during_current_month_fix
 
 
 
@@ -353,6 +378,14 @@ id_spillovers(RB_pre201905_adm2,
 ```
 
 
+
+heat charting
+```{r}
+
+heat_map_gg(.dat = RB_pre_post_compiled,x = "popn_treated_during_current_month",grp_vars = c("year","adm1_name","adm2_name"),date_col = "date")
+heat_map_gg(.dat = RB_pre_post_compiled,x = "popn_treated_during_current_month",grp_vars = c("year","adm1_name","adm2_name"),date_col = "date")
+
+```
 
 
 
