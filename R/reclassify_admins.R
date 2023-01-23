@@ -83,8 +83,42 @@ clean_adm1 <-  function(df){
 
 }
 
-clean_metekel_dam_worker <-  function(df){
-  df |>
+
+clean_gambela_refugees <- function(df,data_format="current"){
+  if(data_format=="current"){
+    res <- df %>%
+      dplyr::mutate(
+        adm3_name = dplyr::case_when(
+          adm1_name == "gambela" & adm2_name %in% c("refugees_7_camps","refugees_7_vamps")~"refugees (7 camps)" ,
+          adm1_name == "gambela" & adm2_name == "refugees_gambella"~"refugees" ,
+          TRUE ~ adm3_name
+
+        ),
+        adm2_name = dplyr::case_when(
+          adm1_name=="gambela" & str_detect(adm2_name,"refug")~"agnewak",
+          TRUE~ adm2_name
+        ),
+        adm_1_2_3=  glue::glue("{adm1_name}-{adm2_name}-{adm3_name}")
+      )
+
+  }
+  if(data_format=="old"){
+    res <- df %>%
+      dplyr::mutate(
+        adm2_name = dplyr::case_when(
+          adm1_name=="gambela" & str_detect(adm2_name,"refug")~"agnewak",
+          TRUE~ adm2_name
+        )
+      )
+
+  }
+  return(res)
+}
+
+clean_metekel_dam_worker <-  function(df,data_format="current"){
+
+  if(data_format=="current"){
+    df |>
     dplyr::mutate(
       adm_1_2_3=  glue::glue("{adm1_name}-{adm2_name}-{adm3_name}"),
       adm1_name = dplyr::case_when(
@@ -101,6 +135,8 @@ clean_metekel_dam_worker <-  function(df){
       ),
       adm_1_2_3=  glue::glue("{adm1_name}-{adm2_name}-{adm3_name}")
     )
+  }
+
 }
 
 #' Title
@@ -115,6 +151,7 @@ clean_metekel_dam_worker <-  function(df){
 clean_admins_lfrx_patch <- function(df){
   df |>
     clean_metekel_dam_worker() |>
+    clean_gambela_refugees() %>%
     dplyr::mutate(
       adm_1_2_3=  glue::glue("{adm1_name}-{adm2_name}-{adm3_name}"),
       adm1_name =
@@ -183,7 +220,7 @@ clean_adm2 <-  function(df,data_format="current"){
           adm1_name == "oromia" & adm2_name %in% c("north_shoa",
                                                    "north_shoa_or",
                                                    "north_shoa_2")~"north_shewa_or" ,
-          adm1_name == "amhara" & adm2_name == c("north_shoa",
+          adm1_name == "amhara" & adm2_name %in% c("north_shoa",
                                                  "north_shoa_2",
                                                  "north_shoa_ensaro",
                                                  "north_showa_am")~"north_shewa_am" ,
@@ -195,13 +232,14 @@ clean_adm2 <-  function(df,data_format="current"){
           adm1_name == "oromia" & adm2_name == "e_arsi"~"arsi" ,
           adm1_name %in%c("snnp", "snnpr") & adm2_name =="kaffa"~"kefa",
           adm1_name == "benishangul_gumz" & adm2_name == "dam_workers_metekel"~"metekel" ,
-          adm1_name == "gambela" & adm2_name == "refugees_7_camps"~"refugees" ,
-          adm1_name == "gambela" & adm2_name == "refugees_7_vamps"~"refugees" ,
-          adm1_name == "gambela" & adm2_name == "refugees_gambella"~"refugees" ,
+          # adm1_name == "gambela" & adm2_name == "refugees_7_camps"~"refugees" ,
+          # adm1_name == "gambela" & adm2_name == "refugees_7_vamps"~"refugees" ,
+          # adm1_name == "gambela" & adm2_name == "refugees_gambella"~"refugees" ,
           adm2_name == "gamogofa" ~ "gofa",
           adm2_name == "west_omo" ~ "mirab_omo",
           adm2_name == "west_om_b_149_o" ~ "mirab_omo",
           adm2_name == "bench_maji" ~ "bench_sheko",
+
 
           TRUE ~ adm2_name
         ),
@@ -228,9 +266,9 @@ clean_adm2 <-  function(df,data_format="current"){
           adm2_name == "e_arsi"~"arsi" ,
           adm2_name =="kaffa"~"kefa",
           adm2_name == "dam_workers_metekel"~"metekel" ,
-          adm2_name == "refugees_7_camps"~"refugees" ,
-          adm2_name == "refugees_7_vamps"~"refugees" ,
-          adm2_name == "refugees_gambella"~"refugees" ,
+          # adm2_name == "refugees_7_camps"~"refugees" ,
+          # adm2_name == "refugees_7_vamps"~"refugees" ,
+          adm2_name %in% c("refugees_gambella","gambella","refugges_gambella")~"agnewak" ,
           adm2_name == "gamogofa" ~ "gofa",
           adm2_name == "west_omo" ~ "mirab_omo",
           adm2_name == "west_om_b_149_o" ~ "mirab_omo",
@@ -247,7 +285,7 @@ clean_adm2 <-  function(df,data_format="current"){
           adm2_name == "east_harerge"~"east_hararge",
           adm2_name == "west_harerge"~"west_hararge",
           adm2_name == "west_harerge"~"west_hararge",
-          adm2_name =="refugges_gambella"~"refugees" ,# this is how it's reclassified in "new", but not sure if should add gambella tag here since we don't have adm1...
+          # adm2_name =="refugges_gambella"~"refugees" ,# this is how it's reclassified in "new", but not sure if should add gambella tag here since we don't have adm1...
           TRUE ~ adm2_name
         )#,
         # adm_1_2_3=  glue::glue("{adm1_name}-{adm2_name}-{adm3_name}") # no adm1 or 3 in old format data yet
@@ -610,7 +648,8 @@ join_master_admin_to_pre201905_data <- function(df_list, master_adm){
             dplyr::select(adm1_name=adm1_en, adm2_name = adm2_en) |>
             dplyr::distinct(),
           by=c("adm2_name"="adm2_name")
-        )
+        ) %>%
+        clean_gambela_refugees(data_format="old")
     )
 
 }

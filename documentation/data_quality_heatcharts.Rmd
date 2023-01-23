@@ -16,6 +16,37 @@ tar_load_everything()
 lapply(list.files("R", full.names = TRUE, recursive = TRUE), source)
 ```
 
+```{r}
+
+
+
+# RB_post201905_adm2 %>%
+RB_pre_post_compiled %>%   
+  left_join(eth_master_adm %>%
+              bind_rows(cc_operational()) %>% 
+              distinct(adm1_en,adm1_pcode,adm2_en,adm2_pcode), c("adm1_name"= "adm1_en","adm2_name"= "adm2_en")) %>% 
+  select(year, month,date, adm1_name, adm1_pcode, adm2_name,adm2_pcode,everything()) %>% 
+  filter(is.na(adm1_pcode)) %>% count(adm1_name,adm2_name,file_name) %>% 
+  print(n=27)
+
+
+RB_pre201905_adm2
+RB_post201905_adm2
+
+eth_master_adm %>% 
+  filter(str_detect(adm2_en,"north")) %>% 
+  count(adm1_en, adm2_en,adm3_en)
+
+RB_post201905_adm3 %>% 
+  filter(str_detect(adm2_name,"agnewak")) %>% 
+  distinct(adm1_name,adm2_name,adm3_name)
+
+eth_master_adm %>% 
+  glimpse()
+  group_by(adm1_en, adm1_pcode) %>% 
+  group_modify(~ add_row(.x,.before=0))
+```
+
 ## Overview
 
 ### yearly % treated
@@ -32,9 +63,29 @@ ggiraph::girafe(ggobj = b4_fixing)
 
 Might want to move this code later... but i'm going to make a name patch
 ```{r}
-# RB_pre_post_compiled %>% 
+
+RB_pre_post_compiled %>% 
+  filter(str_detect(adm2_name,"refugee")) %>% distinct(adm1_name,adm2_name)
+
+RB_post201905_adm3 %>% 
+  filter(str_detect(adm3_name,"refugee")) %>% distinct(adm2_name,adm3_name)
+
+eth_master_adm %>% 
+  filter(str_detect(adm2_en,"buno")) %>% distinct(adm1_en,adm2_en,adm3_en)
+
+eth_master_adm %>% 
+  filter(str_detect(adm2_en,"gamo")) %>% distinct(adm1_en,adm2_en,adm3_en)
+
+eth_master_adm %>% 
+  filter(str_detect(adm1_en,"gamb")) %>% distinct(adm1_en,adm2_en,adm3_en)
+  
+
+# RB_pre_post_compiled %>%
 #   mutate(
-#     adm2_name = case_when(adm2_name=="")
+#     adm2_name = case_when(
+#       adm2_name=="north_gondar"~"west_gondar"
+#       
+#       )
 #   )
 
 ```
@@ -137,4 +188,58 @@ ggiraph::girafe(ggobj = plot_heat_monthly_adm3
 
 ```
 
+
+```{r}
+
+adm3_level_names =RB_post201905_df_ls |>
+  map_dfr(
+    ~.x %>% 
+      janitor::clean_names() |>
+    standardize_admin_names(data_format = "current")|>
+    drop_summary_rows() |>
+    sep_adm_2_3() |>
+    sanitize_admins() %>% 
+      select(adm1_name,adm2_name,adm3_name)
+
+    
+  )
+
+
+adm3_level_names %>% 
+  filter(str_detect(adm2_name,"refugee")) %>% 
+  distinct()
+    
+
+
+
+adm2_level_names<- RB_pre201905_df_ls %>% 
+    map_dfr(
+    ~.x %>% 
+       parse_top_table() |>
+          janitor::clean_names() |>
+          standardize_admin_names(data_format = "old") |>
+          drop_summary_rows(data_format = "old") |>
+          sanitize_admins() %>%
+      select(starts_with("adm"))
+          
+          #clean_adm2(data_format = data_format)
+    )
+}
+adm2_level_names %>% filter(
+  str_detect(adm2_name, "ref")
+  ) %>% 
+  distinct()    
+
+RB_pre_post_compiled %>% 
+  filter(str_detect(adm2_name, "refugee")) %>% 
+  distinct(adm1_name,adm2_name)
+RB_post201905_adm3 %>% 
+  filter(str_detect(adm2_name, "refugee")) %>% 
+  distinct(adm1_name,adm2_name)
+
+RB_pre201905_adm2 %>% 
+  filter(str_detect(adm2_name, "refugee")) %>% 
+  distinct(adm1_name,adm2_name)
+
+````
 
