@@ -95,3 +95,49 @@ fix_spillovers <- function(df, x,grp_vars){
   #     !!x:=replace_na(!!sym(x),0)
   #   )
 }
+
+
+#' Title
+#'
+#' @param df
+#' @param adm2_issue \code{character} adm2 name with issue
+#' @param date_issue  \code{character} date of issue in YYYY-mm-dd format
+#' @return
+#' @export
+#'
+#' @examples
+
+fix_spill_adm2 <- function(df,
+
+                           adm2_issue = "east_hararge",
+                           date_issue="2021-01-01"
+){
+
+  assertthat::assert_that(adm2_issue%in%df$adm2_name,msg = "mistake in adm2 issue")
+  yr_issue <-  year(ymd(date_issue))
+  mo_issue <-  month(ymd(date_issue))
+  prev_yr = yr_issue-1
+  prev_mo= 12
+  if(!"pop_treated_monthly_fix" %in% colnames(df)){
+    df <- df %>%
+      mutate(pop_treated_monthly_fix = popn_treated_during_current_month)
+  }
+
+
+  month_id_fix <- df %>%
+    filter(
+      adm2_name==adm2_issue,
+      year== yr_issue,
+      month==mo_issue
+    ) %>%
+    mutate(pop_treated_monthly_fix = 0)
+
+  prev_month_fix <- month_id_fix %>%
+    select(adm1_name,adm2_name,adm3_name, pop_treated_monthly_fix= popn_treated_during_current_month) %>%
+    mutate(year=prev_yr,
+           month= prev_mo)
+  df %>%
+    dplyr::rows_update(month_id_fix, by= c("year","month","adm1_name","adm2_name","adm3_name")) %>%
+    dplyr::rows_update(prev_month_fix, by= c("year","month","adm1_name","adm2_name","adm3_name"))
+}
+

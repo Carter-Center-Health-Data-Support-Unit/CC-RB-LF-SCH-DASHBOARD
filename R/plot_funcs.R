@@ -238,12 +238,17 @@ heat_map_gg_cum_adm2 <- function(.dat,x,grp_vars=c("year","adm1_name","adm2_name
 
 
 heat_map_gg <- function(.dat,x,y,fill,facet_var){
+  # scales::sqrt_trans()
 
   p_base <- .dat |>
     ggplot2::ggplot()+
     # scale_fill_continuous()+
-    scale_fill_gradient(low = "lightyellow",
-                         high = "darkred")+
+    scale_fill_gradient(
+
+      # trans=scales::pseudo_log_trans(base = 2),
+      trans=scales::sqrt_trans(),
+      low = "lightyellow",
+      high = "darkred")+
     # scale_fill_gradient(low="yellow" , high="red",na.value = "darkgrey")+
     # gghdx::scale_fill_gradient_hdx_tomato(
     #   # breaks= seq(0,max(dat),by=0.1),
@@ -280,14 +285,15 @@ heat_map_gg <- function(.dat,x,y,fill,facet_var){
   pf <- p_base+
     ggiraph::geom_tile_interactive(aes(x= {{x}},
                                        y= {{y}},
-                                       fill={{fill}},
+                                       fill=!!sym(fill),
                                        tooltip= glue::glue("Region: {adm1_name}<br>
                                                              Zone: {adm2_name}<br>
                                                              Year: {year}<br>
                                                              Month: {month}<br>
                                                              Monthly treated: {abbreviate_large_numbers(popn_treated_during_current_month)}<br>
-                                                             Yearly cumulative ({year}): {abbreviate_large_numbers(treated_cumulative)}<br>
-                                                             % goal treated: {round(pct_treated_utg_total*100,1)}<br>",
+                                                             Monthly treated (fix): {abbreviate_large_numbers(pop_treated_monthly_fix)}<br>
+                                                             Yearly cumulative ({year}): {abbreviate_large_numbers(cum_treated_yr)}<br>
+                                                             % goal treated: {round(pct_utg_treated_yr*100,1)}<br>",
 
                                        )),color="grey")+
     geom_vline(xintercept = lubridate::ymd(c(

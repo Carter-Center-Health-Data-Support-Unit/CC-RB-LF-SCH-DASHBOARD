@@ -79,14 +79,90 @@ list(
              command=deduplicate(df=RB_post201905_adm3_compiled,adm1_name,adm2_name,adm3_name,date)
                ),
 
-  tar_target(name=RB_post201905_adm3,
+  tar_target(name=RB_post201905_adm3_spillfix,
              command=fix_spillovers(RB_post201905_adm3_dedup,"popn_treated_during_current_month",grp_vars =c("adm1_name","adm2_name","adm3_name","year"))
                ),
+  tar_target(name=RB_post201905_adm3,
+
+
+             # fill in all combos
+             command=
+               RB_post201905_adm3_spillfix %>%
+               complete(nesting(adm1_name,adm2_name,adm3_name),date,
+                        fill = list(
+                          popn_treated_during_current_month=0,
+                          villages_treated_during_current_month=0
+                        )
+               ) %>%
+               mutate(
+                 month=month(date),
+                 year = year(date),
+                 month_fmt= formatC(month,width=2,flag="0"),
+                 file_name= glue::glue("{year}{month_fmt}_ETH_CCRBLFSCHI_Monthly.xlsx"),
+                 popn_treated_during_current_month=replace_na(popn_treated_during_current_month,0)
+               ) %>%
+               select(-month_fmt) %>%
+               # mode of yearly summary figures so they dont change per year
+               mode_yearly_numbers(num_cols=c("utg_2_treatment_target_for_the_whole_year",
+                                                                                "utg_treatment_target_for_each_round",
+                                                                             "active_villages_for_the_year",'total_population'),
+                                         grp_vars=c("year","adm1_name","adm2_name","adm3_name")) %>%
+
+
+
+               fix_spill_adm2(adm2_issue="east_hararge",
+                              date_issue = "2021-01-01") %>%
+               fix_spill_adm2(adm2_issue="west_hararge",
+                              date_issue = "2021-01-01") %>%
+               fix_spill_adm2(adm2_issue="kefa",
+                              date_issue = "2021-01-01") %>%
+               fix_spill_adm2(adm2_issue="dawuro",
+                              date_issue = "2021-01-01") %>%
+               fix_spill_adm2(adm2_issue="dawuro",
+                              date_issue = "2020-01-01") %>%
+               fix_spill_adm2(adm2_issue="mirab_omo",
+                              date_issue = "2021-01-01") %>%
+               fix_spill_adm2(adm2_issue="bench_sheko",
+                              date_issue = "2021-01-01") %>%
+               fix_spill_adm2(adm2_issue="central_gondar",
+                              date_issue = "2021-01-01") %>%
+               fix_spill_adm2(adm2_issue="gofa",
+                              date_issue = "2021-01-01") %>%
+               fix_spill_adm2(adm2_issue="majang",
+                              date_issue = "2021-01-01") %>%
+               fix_spill_adm2(adm2_issue="sheka",
+                              date_issue = "2021-01-01") %>%
+               fix_spill_adm2(adm2_issue="south_omo",
+                              date_issue = "2021-01-01") %>%
+               fix_spill_adm2(adm2_issue="agnewak",
+                              date_issue = "2021-01-01") %>%
+               fix_spill_adm2(adm2_issue="awi",
+                              date_issue = "2021-01-01") %>%
+               fix_spill_adm2(adm2_issue="west_gondar",
+                              date_issue = "2021-01-01") %>%
+               group_by(year,adm1_name,adm2_name,adm3_name) %>%
+               mutate(
+                 cum_treated_yr = cumsum(popn_treated_during_current_month),
+                 cum_treated_yr_fix = cumsum(pop_treated_monthly_fix),
+                 cum_villages_yr = cumsum(villages_treated_during_current_month)
+               ) %>%
+               ungroup() %>%
+               mutate(
+                 pct_utg_treated_yr = cum_treated_yr/utg_2_treatment_target_for_the_whole_year,
+                 pct_utg_treated_yr_fix = cum_treated_yr_fix/utg_2_treatment_target_for_the_whole_year,
+                 pct_pop_treated_yr = cum_treated_yr/total_population,
+                 pct_pop_treated_yr_fix = cum_treated_yr_fix/total_population,
+                 pct_villages_yr = cum_villages_yr/active_villages_for_the_year
+
+               )
+               ),
+
 
   # we need to make two data sets from current: a.) admin 2 level (for binding with old), admin 3 level
   tar_target(
     name = RB_post201905_adm2,
     command= summarise_to_adm2(RB_post201905_adm3)
+
   ),
 
   # Clean RB (Pre) --------------------------------------------------
@@ -114,7 +190,12 @@ list(
   # one thing i noted is that metekel dam workers & metekel admin 2 gets summed here... i think that seems okay at adm2 level?
   tar_target(
     name = RB_pre201905_to_adm2,
-    command= summarise_to_adm2(RB_pre201905_df_compiled)
+    command= RB_pre201905_df_compiled %>%
+      mode_yearly_numbers(num_cols=c("utg_2_treatment_target_for_the_whole_year","utg_treatment_target_for_each_round",
+                                     "active_villages_for_the_year",'total_population'),
+                          grp_vars=c("year","adm1_name","adm2_name")) %>%
+      mutate(pop_treated_monthly_fix=popn_treated_during_current_month) %>%  # dummy holder for now
+      summarise_to_adm2()
   ),
   tar_target(
     name = RB_pre201905_adm2,
@@ -124,7 +205,25 @@ list(
 # RB Merge Pre & Post -----------------------------------------------------
   tar_target(
     name = RB_pre_post_compiled,
-      command = dplyr::bind_rows(RB_pre201905_adm2,RB_post201905_adm2)
+      command = dplyr::bind_rows(RB_pre201905_adm2,RB_post201905_adm2) %>%
+      mode_yearly_numbers(num_cols=c("utg_2_treatment_target_for_the_whole_year",
+                                                                 "active_villages_for_the_year",'total_population'),
+                          grp_vars=c("year","adm1_name","adm2_name")) %>%
+      group_by(year,adm1_name,adm2_name) %>%
+      mutate(
+        cum_treated_yr = cumsum(popn_treated_during_current_month),
+        cum_treated_yr_fix = cumsum(popn_treated_during_current_month_fix),
+        cum_villages_yr = cumsum(villages_treated_during_current_month)
+      ) %>%
+      ungroup() %>%
+      mutate(
+        pct_utg_treated_yr = cum_treated_yr/utg_2_treatment_target_for_the_whole_year,
+        pct_utg_treated_yr_fix = cum_treated_yr_fix/utg_2_treatment_target_for_the_whole_year,
+        pct_pop_treated_yr = cum_treated_yr/total_population,
+        pct_pop_treated_yr_fix = cum_treated_yr_fix/total_population,
+        pct_villages_yr = cum_villages_yr/active_villages_for_the_year
+
+      )
   ),
 
 

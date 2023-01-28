@@ -89,8 +89,8 @@ clean_gambela_refugees <- function(df,data_format="current"){
     res <- df %>%
       dplyr::mutate(
         adm3_name = dplyr::case_when(
-          adm1_name == "gambela" & adm2_name %in% c("refugees_7_camps","refugees_7_vamps")~"refugees (7 camps)" ,
-          adm1_name == "gambela" & adm2_name == "refugees_gambella"~"refugees" ,
+          adm1_name == "gambela" & adm2_name %in% c("refugees_7_camps","refugees_7_vamps","refugees_gambella")~"refugees" ,
+          # adm1_name == "gambela" & adm2_name == "refugees_gambella"~"refugees" ,
           TRUE ~ adm3_name
 
         ),
@@ -159,6 +159,11 @@ clean_admins_lfrx_patch <- function(df){
           adm1_name == "south_west_ethiopia" & adm2_name== "south_omo"~"snnp",
           adm1_name %in% c("gambela","amahara","amhara") & adm2_name %in% c("metekel","dam_workers_metekel")~"benishangul_gumz",
           TRUE ~ adm1_name
+        ),
+      adm_1_2_3=  glue::glue("{adm1_name}-{adm2_name}-{adm3_name}"),
+      adm2_name = dplyr::case_when(
+        adm2_name=="north_gondar"~"west_gondar",
+        TRUE~adm2_name
         ),
       adm_1_2_3=  glue::glue("{adm1_name}-{adm2_name}-{adm3_name}"),
 
@@ -514,6 +519,7 @@ clean_names_and_admins <-  function(df,data_format="current"){
     drop_summary_rows() |>
     sep_adm_2_3() |>
     sanitize_admins()
+  # assertthat::assert_that(df_san_initial %>% filter(adm3_name=="am") %>% nrow()==0,msg = "herest the issue")
 
   df_san_initial|>
     clean_adm1() |>
@@ -526,7 +532,7 @@ clean_names_and_admins <-  function(df,data_format="current"){
 
 remove_empty_artefact_cols <-  function(df){
   df_p_artefacts <-  df |>
-    parse_top_table() |>
+    # parse_top_table() |>
     select(matches("^x\\d*"))
 
   df_x_cols_rm <- df |>
@@ -554,16 +560,30 @@ remove_empty_artefact_cols <-  function(df){
 extract_pre_clean_names_adms_batch <- function(df_list,data_format= "current"){
   if(data_format=="current"){
     res <- df_list |>
-      purrr::map2(.y = names(df_list),
-                  ~ {
-                    .x |>
-                      dplyr::mutate(
-                        file_name = .y
-                      ) |>
-                      parse_top_table() |>
-                      clean_names_and_admins(data_format = data_format)
 
-                  }
+      purrr::map2(.y = names(df_list),
+                  .f = \(dat,fname){
+
+        # blankout garbage rows (if no zone)
+        dat_garbage_blanked <- dat %>%
+                       dplyr::mutate(across(everything(),
+                                            ~ifelse(is.na(Zone),NA,.x))
+                       )
+
+        x_top <- parse_top_table(dat_garbage_blanked) |>
+          dplyr::mutate(
+            file_name = fname
+          )
+        print(fname)
+        # print(colnames(x_temp))
+        print(nrow(x_top))
+
+
+
+        res <- x_top %>%
+          clean_names_and_admins(data_format = data_format)
+
+      }
       )
 
 
@@ -581,7 +601,15 @@ extract_pre_clean_names_adms_batch <- function(df_list,data_format= "current"){
           drop_summary_rows(data_format = data_format) |>
           sanitize_admins() |>
           # no admin 1 provided in old format data... need to attach later
-          clean_adm2(data_format = data_format)
+          clean_adm2(data_format = data_format) %>%
+          # dont want to add this into `clean_adm2`, becaseu i might have
+          # clean_adm3 conditions that rely on north_gondar in "new" sec above
+          dplyr::mutate(
+            adm2_name = dplyr::case_when(
+              adm2_name=="north_gondar"~"west_gondar",
+              TRUE~adm2_name
+            )
+          )
 
       }
       )
@@ -662,7 +690,10 @@ join_master_admin_to_pre201905_data <- function(df_list, master_adm){
 
 # for current data
 bind_rows_add_dates_fill_pop <-  function(df_list, data_format= "current"){
-  w_dates <- dplyr::bind_rows(df_list) |>
+  w_dates <- purrr::map_dfr(df_list,~.x %>%
+                              mutate(
+                                across(everything(), ~as.character(.x)))
+  ) %>%
     dplyr::mutate(
       year=str_sub(string = file_name,start = 1,end = 4) |> as.numeric(),
       month=str_sub(string = file_name,start = 5,end = 6) |> as.numeric(),
@@ -676,7 +707,7 @@ bind_rows_add_dates_fill_pop <-  function(df_list, data_format= "current"){
   w_dates <- suppressMessages(readr::type_convert(w_dates))|>
     dplyr::mutate(
       active_villages_for_the_year =as.numeric(active_villages_for_the_year),
-      total_population= dplyr::if_else(is.na(total_popn_census),total_popn_projected,total_popn_census)
+      total_population= dplyr::if_else(is.na(total_popn_census),as.numeric(total_popn_projected),as.numeric(total_popn_census))
     ) |>
     dplyr::select(date,everything())
 

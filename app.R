@@ -3,21 +3,29 @@ rm(list = ls())
 library(shiny)
 library(shinyWidgets)
 library(tidyverse)
-library(targets)
+# library(targets)
 library(lubridate)
-library(DT)
+# library(DT)
 library(sf)
 library(htmltools)
-library(snakecase)
+# library(snakecase)
 library(leaflet)
 # load internal funcs
 invisible(purrr::map(dir(here::here("R/"),full.names = T),~source(.x,verbose = FALSE,echo = F)))
 
 options(scipen = 999)
 
+# tar_load_everything()
+
 # load data
-tar_load(RB_pre_post_compiled) ### pre and post admin 2 level data
-# RB_pre_post_compiled <- RB_pre_post_compiled %>%
+# tar_load(RB_pre_post_compiled) ### pre and post admin 2 level data
+# tar_load(RB_post201905_adm3)
+# write_rds(RB_pre_post_compiled,"data/shiny_adm2.rds")
+# write_rds(RB_post201905_adm3,"data/shiny_adm3.rds")
+dat_adm2 <- read_rds("data/shiny_adm2.rds")
+dat_adm3 <- read_rds("data/shiny_adm3.rds")
+
+# dat_adm2 <- dat_adm2 %>%
 #   mutate(popn_treated_during_current_month=popn_treated_during_current_month_fix)
 
 
@@ -51,7 +59,7 @@ admin2_boundary<- st_read("data/shapefile/eth_admbnda_adm2_csa_bofedb_2021.shp")
 ######################################### START::Fix admin 1 Name ############################
 # admin2_boundary$ADM1_EN %>% unique()
 
-# RB_pre_post_compiled <- RB_pre_post_compiled %>% mutate(
+# dat_adm2 <- dat_adm2 %>% mutate(
 #   adm1_name = to_title_case(adm1_name)
 # ) %>% mutate(
 #   adm1_name = case_when(adm1_name == "Snnp" ~ "SNNP",T~adm1_name)
@@ -60,9 +68,9 @@ admin2_boundary<- st_read("data/shapefile/eth_admbnda_adm2_csa_bofedb_2021.shp")
 ######################################### END::Fix admin 1 Name ############################
 
 ######################################### START::Fix admin 2 Name ############################
-# RB_pre_post_compiled$adm2_name <- RB_pre_post_compiled$adm2_name %>% snakecase::to_title_case()
+# dat_adm2$adm2_name <- dat_adm2$adm2_name %>% snakecase::to_title_case()
 
-# RB_pre_post_compiled <- RB_pre_post_compiled %>% mutate(
+# dat_adm2 <- dat_adm2 %>% mutate(
 #   adm2_name = case_when(adm2_name == "North Shewa Am" ~ "North Shewa",
 #                         adm2_name == "North Shoa 2" ~ "North Shewa",
 #                         adm2_name == "North Shewa or" ~"North Shewa",
@@ -76,38 +84,59 @@ admin2_boundary<- st_read("data/shapefile/eth_admbnda_adm2_csa_bofedb_2021.shp")
 ######################################### END::Fix admin 2 Name ############################
 
 
-region_cols <-c("month","year","date", "adm1_name","cumulatative_target",
-                "popn_treated_during_current_month", "utg_treatment_target_for_each_round",
-                "utg_2_treatment_target_for_the_whole_year", "total_popn_projected",
-                "popn_treated_round1", "popn_treated_round2", "popn_treated_cumulative_all_rounds",
-                "active_villages_for_the_year", "villages_treated_during_current_month",
-                "villages_treated_round_1", "villages_treated_round_2", "total_popn_census",
-                "total_population", "percent_utg_treated_round_1", "percent_utg_2_treated_all_rounds",
-                "percent_popn_treated_round_1", "percent_active_villages_treated_for_round_1",
+region_cols <-c("month",
+                "year",
+                "date",
+                "adm1_name",
+                "cumulatative_target",
+                "popn_treated_during_current_month",
+                "utg_treatment_target_for_each_round",
+                "utg_2_treatment_target_for_the_whole_year",
+                "total_popn_projected",
+                "popn_treated_round1",
+                "popn_treated_round2",
+                "popn_treated_cumulative_all_rounds",
+                "active_villages_for_the_year",
+                "villages_treated_during_current_month",
+                "villages_treated_round_1",
+                "villages_treated_round_2",
+                "total_popn_census",
+                "total_population",
+                "percent_utg_treated_round_1",
+                "percent_utg_2_treated_all_rounds",
+                "percent_popn_treated_round_1",
+                "percent_active_villages_treated_for_round_1",
                 "percent_active_villages_treated_for_round_2",
-                "percent_popn_treated_round_2")
+                "percent_popn_treated_round_2",
+                "cum_treated_yr",
+                "cum_villages_yr",
+                "pct_pop_treated_yr",
+                "pct_utg_treated_yr",
+                "pct_villages_yr"
+
+                )
 
 
 
 
 
 
-RB_pre_post_compiled$month <- month(RB_pre_post_compiled$month,label = T)
-RB_pre_post_compiled$year <- factor(RB_pre_post_compiled$year)
+dat_adm2$month <- month(dat_adm2$month,label = T)
+dat_adm2$year <- factor(dat_adm2$year)
+#
+# dat_adm2 <- dat_adm2 %>%
+#   group_by(adm2_name,year) %>%
+#   mutate(cumulatative_target = cumsum(popn_treated_during_current_month)) %>%
+#   ungroup()
+#
+# dat_adm2 <- dat_adm2 %>% mutate(
+#   cum_percentage_treated = round(cumulatative_target/total_population*100),
+#   cum_percentage_utg = round(cumulatative_target/utg_treatment_target_for_each_round*100)
+#
+# )
 
-RB_pre_post_compiled <- RB_pre_post_compiled %>%
-  group_by(adm2_name,year) %>%
-  mutate(cumulatative_target = cumsum(popn_treated_during_current_month)) %>%
-  ungroup()
-
-RB_pre_post_compiled <- RB_pre_post_compiled %>% mutate(
-  cum_percentage_treated = round(cumulatative_target/total_population*100),
-  cum_percentage_utg = round(cumulatative_target/utg_treatment_target_for_each_round*100)
-
-)
-
-region_df <- RB_pre_post_compiled %>%
-  select(all_of(region_cols)) %>%
+region_df <- dat_adm2 %>%
+  select(any_of(region_cols)) %>%
   group_by(date,month,year,adm1_name) %>%
   summarise(
     across(everything(),~sum(.x,na.rm = T)),
@@ -126,7 +155,7 @@ region_df <- region_df %>% mutate(
 
 )
 
-pop_data <- RB_pre_post_compiled %>% select(adm2_name,adm1_name,year,total_population,
+pop_data <- dat_adm2 %>% select(adm2_name,adm1_name,year,total_population,
                                             popn_treated_during_current_month,
                                             utg_treatment_target_for_each_round,
                                             utg_2_treatment_target_for_the_whole_year
@@ -156,8 +185,8 @@ pop_data_max_sum <- pop_data %>% group_by(year,adm1_name,adm2_name) %>%
 
 
 ############# START:: CURRENT DATA:: FOR CURRENT SITUATION MONITORING TAB ######
-latest_date <- max(RB_pre_post_compiled$date)
-current_data <- RB_pre_post_compiled %>%
+latest_date <- max(dat_adm2$date)
+current_data <- dat_adm2 %>%
   filter(date == latest_date) %>%
   mutate(
   treated_vs_target = round(popn_treated_during_current_month/utg_treatment_target_for_each_round*100,2)
@@ -173,8 +202,17 @@ spatial_data <- admin2_boundary %>%
 
 current_monitoring_title = glue::glue("{lubridate::month(latest_date,label=T, abbr=F)} {lubridate::year(latest_date)} - Current Program Status ")
 
-plot_heatchart <-   heat_map_gg_cum_adm2(.dat = RB_pre_post_compiled,x = "popn_treated_during_current_month",grp_vars = c("year","adm1_name","adm2_name"),date_col = "date")
-bar_plot_utg_remain <- plot_utg_remaining_year(.dat = RB_pre_post_compiled)
+# plot_heatchart <-   heat_map_gg_cum_adm2(.dat = dat_adm2,
+#                                          x = "popn_treated_during_current_month",
+#                                          grp_vars = c("year","adm1_name","adm2_name"),
+#                                          date_col = "date")
+
+
+####  MIGHT WANT TO BRING THIS BACK, BUT NEEDS REVISITING
+# bar_plot_utg_remain <- plot_utg_remaining_year(.dat = dat_adm2)
+
+
+
 ## preparing base map
 
 # leaflet_map -------------------------------------------------------------
@@ -224,13 +262,29 @@ ui <- fluidPage(
     windowTitle = "CC-RB-SCH DASHBOARD",
     HTML('<a style="padding-left:20px;" class = "navbar-brand" href = "https://www.cartercenter.org" target="_blank"><img src = "logo.png" height = "46"></a><span class="navbar-text" style="font-size: 16px; color: #FFFFFF"><strong>ETHIOPIA CC-RB-LF-SCH DASHBOARD</strong></span>'),
     tabPanel("Overview",
+             fluidRow(
              column(
                width= 12,
-               h3("% Ultimate Treatment Goal by Month and Zone"),
+               h3("Zone Level Treatment Over Time"),
+               radioButtons("ht_chart_type",label="",
+                            choices = c(
+                              "Monthly Treated" = "popn_treated_during_current_month",
+                              "Monthly Treated (fix)" = "pop_treated_monthly_fix",
+                              "% UTG reached" = "pct_utg_treated_yr",
+                              "% UTG reached (fix)"="pct_utg_treated_yr_fix",
+                              "Yearly Cumulative" ="cum_treated_yr",
+                              "Yearly Cumulative (fix)" ="cum_treated_yr_fix"
+                            ),selected = "popn_treated_during_current_month", inline=TRUE),
+
+
                ggiraph::ggiraphOutput("heat_chart",
-                                      width = "100%",height="500px")
+                                      width = "100%",height="500px"),
+               h3("Ward Level Treatment Over Time"),
+               ggiraph::ggiraphOutput("heat_chart_adm3",
+                                      width = "100%", height = "5400px")
              )
              )
+    )
     ,
 
     tabPanel("Admin Level info!",
@@ -239,24 +293,26 @@ ui <- fluidPage(
                     h3("Region level Info"),
                     tags$div(pickerInput("select_admin1",
                                          label = "Select Region (Admin 1):",
-                                         choices = RB_pre_post_compiled$adm1_name %>% unique() %>% dput(),
-                                         selected = (RB_pre_post_compiled$adm1_name %>% unique() %>% dput())[1],
+                                         choices = dat_adm2$adm1_name %>% unique() %>% dput(),
+                                         selected = (dat_adm2$adm1_name %>% unique() %>% dput())[1],
                                          multiple = F,
                                          options = pickerOptions(title = "Select", actionsBox = TRUE, liveSearch = TRUE)
                     ),style="display:inline-block"),
                     hr(),
 
-                    h4("Treatment over time by zone"),
+                    h4("Monthly Treatments"),
                     plotOutput("graph_monthly_region", height = "300px"),
 
-                    h4("Yearly Cumulatitative by zone"),
+                    h4("Cumulative Treatments"),
                     plotOutput("cumulative_region_year", height = "300px"),
 
-                    h4("Percentage treated, out of total population"),
-                    plotOutput("cum_percentage_treated_r", height = "300px"),
+                    h4("% UTG Treated"),
+                    plotOutput("cum_percentage_treated_utg_r", height = "300px"),
 
-                    h4("Percentage treated, out of UTG targets"),
-                    plotOutput("cum_percentage_treated_utg_r", height = "300px")
+                    h4("% Population Treated"),
+                    plotOutput("cum_percentage_treated_r", height = "300px")
+
+
 
 
 
@@ -278,24 +334,19 @@ ui <- fluidPage(
 
                     br(),
                     hr(),
-                    h4("Treatment over time by zone"),
+                    h4("Monthly Treatments"),
                     plotOutput("graph_monthly_treated", height = "300px"),
 
-                    h4("Percentage treated, out of total population"),
-                    plotOutput("cum_percentage_treated", height = "300px"),
+                    h4("Cumulative Treatments"),
+                    plotOutput("plot_adm2_cum_treated", height = "300px"),
 
-                    h4("Percentage treated, out of UTG targets"),
+                    h4("% UTG Treated"),
+                    plotOutput("plot_adm2_pct_utg", height = "300px"),
 
-                    plotOutput("cum_percentage_treated_utg", height = "300px"),
+                    h4("% Population Treated"),
+                    plotOutput("plot_adm2_pct_pop_treated", height = "300px")
 
-                    # h4("Treatment over time by round"),
-                    # plotOutput("grpah_treatment_by_round", height = "300px"),
 
-                    h4("Cumulative treatment over time(original)"),
-                    plotOutput("grpah_treatment_cuma", height = "300px"),
-
-                    h4("Cumulative treatment over time(recalculated)"),
-                    plotOutput("grpah_treatment_cuma_cal", height = "300px")
 
 
 
@@ -313,7 +364,7 @@ ui <- fluidPage(
           opacity: 0.25;
         }
         #controls:hover{
-          opacity: 0.5;
+          opacity: 0.75;
         }
                "),
              column(width = 12,
@@ -329,14 +380,14 @@ ui <- fluidPage(
                     bottom: 0;
                     overflow: hidden;
                     padding: 0}"),
-                    leafletOutput("map",height = "100%")),
-                    absolutePanel(id="controls",
-                                  class = "panel panel-default", fixed = TRUE,
-                                  draggable = F, top = 25, left = "auto", right = 20,
-                                  width = 400,height =700,
-
-                                  plotOutput("plot_utg_remain",width= 400,height=700)
-                    )
+                    leafletOutput("map",height = "100%"))
+                    # absolutePanel(id="controls",
+                    #               class = "panel panel-default", fixed = TRUE,
+                    #               draggable = F, top = 210, left = "auto", right = 20,
+                    #               width = 400,height =700,
+                    #
+                    #               plotOutput("plot_utg_remain",width= 400,height=700)
+                    #)
 
 
 
@@ -355,8 +406,8 @@ ui <- fluidPage(
 
              # tags$div(pickerInput("select_admin1_1",
              #                      label = "Select Region (Admin 1):",
-             #                      choices = RB_pre_post_compiled$adm1_name %>% unique() %>% dput(),
-             #                      selected = (RB_pre_post_compiled$adm1_name %>% unique() %>% dput())[1],
+             #                      choices = dat_adm2$adm1_name %>% unique() %>% dput(),
+             #                      selected = (dat_adm2$adm1_name %>% unique() %>% dput())[1],
              #                      multiple = F,
              #                      options = pickerOptions(title = "Select", actionsBox = TRUE, liveSearch = TRUE)
              # ),style="display:inline-block"),
@@ -408,15 +459,40 @@ ui <- fluidPage(
 ################### server ################
 server <- function(input, output,session){
   output$heat_chart <- ggiraph::renderggiraph({
+    plot_heatchart <- dat_adm2 %>%
+      heat_map_gg(x = date,
+                y = adm2_name,
+                fill= input$ht_chart_type,
+                facet_var = adm1_name)
+
     ggiraph::girafe(ggobj = plot_heatchart,width_svg = 16, height_svg =5)
   })
+
+  output$heat_chart_adm3 <- ggiraph::renderggiraph({
+    plot_heat_chart_adm3 <- dat_adm3 %>%
+    filter(date>="2019-05-01") %>%
+    # complete(nesting(adm1_name,adm2_name,adm3_name),date, fill = list(popn_treated_during_current_month=NA)) %>%
+    heat_map_gg(x = date,
+                y=adm3_name,
+                fill = input$ht_chart_type,
+                facet_var = adm2_name)+
+    theme(
+      text = element_text(size= 15)
+    )
+
+  ggiraph::girafe(ggobj = plot_heat_chart_adm3,
+                  width_svg = 16,
+                  height_svg =54)
+  })
+
   output$plot_utg_remain <-  renderPlot({
     bar_plot_utg_remain
   })
+
   admin1_name <- reactive({input$select_admin1})
   admin1_name_1 <- reactive({input$select_admin1_1})
 
-  admin_1_level_data_filter <-  reactive({RB_pre_post_compiled %>% dplyr::filter(adm1_name == admin1_name())})
+  admin_1_level_data_filter <-  reactive({dat_adm2 %>% dplyr::filter(adm1_name == admin1_name())})
 
 
   ####################### available district name in the selected governorate ############
@@ -471,21 +547,9 @@ server <- function(input, output,session){
   #### population treated cumalitative
 
 
-  output$grpah_treatment_cuma<- renderPlot({
-    ggplot(data=admin_2_level_data_filter(),
-           aes(x=month, y=popn_treated_cumulative_all_rounds,color = year,group= year)) +
-      geom_line()+geom_point()+
-      theme(panel.background = element_rect(fill = "white",
-                                            colour = "black",
-                                            size = 0.5, linetype = "solid")) +
-      xlab("Month")+ ylab("Population treated (Cumulative[original])")
-  })
-
-
-
   ###### cumulatative graph
-  output$grpah_treatment_cuma_cal<- renderPlot({
-    ggplot(admin_2_level_data_filter(), aes(x=month, y=cumulatative_target,color = year,group= year)) +
+  output$plot_adm2_cum_treated<- renderPlot({
+    ggplot(admin_2_level_data_filter(), aes(x=month, y=cum_treated_yr,color = year,group= year)) +
       geom_line()+geom_point()+
       theme(panel.background = element_rect(fill = "white",
                                             colour = "black",
@@ -496,10 +560,11 @@ server <- function(input, output,session){
 
 
   ###### cumulative graph percentage treated
-  output$cum_percentage_treated<- renderPlot({
+  output$plot_adm2_pct_pop_treated<- renderPlot({
     ggplot(admin_2_level_data_filter(),
-           aes(x=month, y=cum_percentage_treated,color = year,group= year)) +
+           aes(x=month, y=pct_pop_treated_yr,color = year,group= year)) +
       geom_line()+geom_point()+
+      scale_y_continuous(labels=scales::percent)+
       theme(panel.background = element_rect(fill = "white",
                                             colour = "black",
                                             size = 0.5, linetype = "solid")) +
@@ -508,10 +573,11 @@ server <- function(input, output,session){
 
 
 
-  output$cum_percentage_treated_utg<- renderPlot({
+  output$plot_adm2_pct_utg<- renderPlot({
     ggplot(admin_2_level_data_filter(),
-           aes(x=month, y=cum_percentage_utg,color = year,group= year)) +
+           aes(x=month, y=pct_utg_treated_yr,color = year,group= year)) +
       geom_line()+geom_point()+
+      scale_y_continuous(labels=scales::percent)+
       theme(panel.background = element_rect(fill = "white",
                                             colour = "black",
                                             size = 0.5, linetype = "solid")) +
@@ -526,7 +592,7 @@ server <- function(input, output,session){
   pop_graph_data <- reactive({admin_1_filter_pop() %>% dplyr::filter(adm2_name == admin2_name_1())})
 
 
-  box_df1 <-  reactive({RB_pre_post_compiled %>% dplyr::filter(adm1_name == admin1_name_1())})
+  box_df1 <-  reactive({dat_adm2 %>% dplyr::filter(adm1_name == admin1_name_1())})
   box_plot_df <- reactive({box_df1() %>% dplyr::filter(adm2_name == admin2_name_1())})
 
 
@@ -677,16 +743,16 @@ server <- function(input, output,session){
 
 
   ####### start::Dt table ########
-  output$pop_table <- renderDT({
-    datatable(pop_data,
-              caption = htmltools::tags$caption(
-                style = 'caption-side: top; text-align: center;',
-                'Table 1: ', htmltools::em('Population by admin 2')
-
-              ))
-
-
-  })
+  # output$pop_table <- renderDT({
+  #   datatable(pop_data,
+  #             caption = htmltools::tags$caption(
+  #               style = 'caption-side: top; text-align: center;',
+  #               'Table 1: ', htmltools::em('Population by admin 2')
+  #
+  #             ))
+  #
+  #
+  # })
 
 
   ####### END::Dt table ########

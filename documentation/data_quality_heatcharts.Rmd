@@ -16,25 +16,171 @@ tar_load_everything()
 lapply(list.files("R", full.names = TRUE, recursive = TRUE), source)
 ```
 
-```{r}
+```{r,eval=F}
+
+
+RB_pre_post_compiled$pct_utg_treated_yr
 
 
 
+RB_pre_post_compiled %>%
+  group_by(year,adm1_name,adm2_name) %>%
+  mutate(
+    cum_treated_yr = cumsum(popn_treated_during_current_month),
+    cum_villages_yr = cumsum(villages_treated_during_current_month)
+         ) %>%
+  ungroup() %>% 
+  mutate(
+    pct_treated_utg_yr = cum_treated_yr/utg_2_treatment_target_for_the_whole_year,
+    pct_villages_yr = cum_villages_yr/active_villages_for_the_year
+  ) 
+
+RB_pre201905_adm2
+
+RB_post201905_adm3 %>% 
+  group_by(year,adm1_name,adm2_name,adm3_name) %>%
+  mutate(
+   num_round_targs = length(unique( utg_treatment_target_for_each_round)),
+   .groups = "drop"
+  ) %>%
+  mutate(
+    round_target_x2 =  utg_treatment_target_for_each_round*2
+  ) %>% 
+  select(contains("target"))
+  count(num_round_targs)
+
+  RB_pre201905_df_compiled %>% 
+  group_by(year,adm1_name,adm2_name) %>%
+  mutate(
+   num_round_targs = length(unique( utg_treatment_target_for_each_round)),
+   .groups = "drop"
+  ) %>%
+  filter(num_round_targs==4) 
+  mutate(
+    round_target_x2 =  utg_treatment_target_for_each_round*2
+  ) %>% 
+  select(contains("target"))
+  count(num_round_targs)
+
+summary_tbl_adm2_pre <- RB_pre201905_adm2 %>% 
+  group_by(year,adm1_name,adm2_name) %>%
+  summarise(
+    utg_target_yearly = mode_cat(utg_2_treatment_target_for_the_whole_year),
+    active_village_yearly = mode_cat(active_villages_for_the_year),
+    total_population_yearly = mode_cat(total_population),
+    .groups="drop"
+  )
+
+RB_post201905_adm3
+
+summary_tbl_adm3 <- RB_post201905_adm3 %>% 
+  group_by(year,adm1_name,adm2_name,adm3_name) %>% 
+  summarise(n=length(unique(utg_2_treatment_target_for_the_whole_year)))
+  summarise(
+    utg_target_yearly = mode_cat(utg_2_treatment_target_for_the_whole_year),
+    active_village_yearly = mode_cat(active_villages_for_the_year),
+    total_population_yearly = mode_cat(total_population),
+    .groups="drop"
+  )
+
+summary_tbl_adm2 <- RB_pre_post_compiled %>% 
+  filter(year>=2019, month>=05) %>% 
+  group_by(year,adm1_name,adm2_name) %>%
+  summarise(
+    utg_target_yearly = round(mode_cat(utg_2_treatment_target_for_the_whole_year),1),
+    active_village_yearly = round(mode_cat(active_villages_for_the_year),1),
+    total_population_yearly = round(mode_cat(total_population),1),
+    .groups="drop"
+  ) 
+
+
+
+RB_post201905_adm3 %>% 
+  group_by(date, adm1_name,adm2_name,adm3_name) %>% 
+  filter(n()>1)
+
+RB_post201905_adm2 %>% 
+  group_by(date, adm1_name,adm2_name) %>% 
+  filter(n()>1)
+
+RB_pre201905_adm2 %>% 
+  group_by(date, adm1_name,adm2_name) %>% 
+  filter(n()>1)
+
+RB_pre_post_compiled %>%
+  filter(popn_treated_during_current_month_fix!=popn_treated_during_current_month)
+  write_csv("eth_adm2_level_playdata.csv")
+  select(date, adm1_name, )
+RB_pre_post_compiled %>% glimpse() 
+  group_by(date, adm1_name,adm2_name) %>% 
+  filter(n()>1)
+
+RB_post201905_adm2 %>% glimpse()
+  group_by(year,adm1_name, adm2_name) %>% 
+  summarise(asdf= length(unique( utg_treatment_target_for_each_round)))
+  count()
+
+
+# needs to be internally consistent.
+
+test <- summary_tbl_adm3 %>% 
+  group_by(year,adm1_name, adm2_name)    %>% 
+  summarise(across(where(is.numeric), ~ round(sum(.x),1)) )
+
+test %>% left_join(summary_tbl_adm2  )
+test %>% slice(6)
+as.matrix(test[,4:6])-as.matrix(summary_tbl_adm2[,4:6])
+test==summary_tbl_adm2
+  
+
+RB_pre_post_compiled %>%   
+  left_join(eth_master_adm %>%
+              bind_rows(cc_operational()) %>% 
+              distinct(adm1_en,adm1_pcode,adm2_en,adm2_pcode), c("adm1_name"= "adm1_en","adm2_name"= "adm2_en")) %>% 
+  select(year, month,date, adm1_name, adm1_pcode, adm2_name,adm2_pcode,everything()) %>%
+  group_by(year,adm1_name,adm2_name) %>% 
+  summarise(
+    utg_year_targ_n = length(unique(utg_2_treatment_target_for_the_whole_year)),
+    unique_village_n =length(unique(active_villages_for_the_year))
+  )
+RB_pre_post_compiled %>%   
+  left_join(eth_master_adm %>%
+              bind_rows(cc_operational()) %>% 
+              distinct(adm1_en,adm1_pcode,adm2_en,adm2_pcode), c("adm1_name"= "adm1_en","adm2_name"= "adm2_en")) %>% 
+  select(year, month,date, adm1_name, adm1_pcode, adm2_name,adm2_pcode,everything()) %>%
+  group_by(year,adm1_name,adm2_name,active_villages_for_the_year) %>% 
+  summarise(
+    n=n()
+  )
 # RB_post201905_adm2 %>%
 RB_pre_post_compiled %>%   
   left_join(eth_master_adm %>%
               bind_rows(cc_operational()) %>% 
               distinct(adm1_en,adm1_pcode,adm2_en,adm2_pcode), c("adm1_name"= "adm1_en","adm2_name"= "adm2_en")) %>% 
   select(year, month,date, adm1_name, adm1_pcode, adm2_name,adm2_pcode,everything()) %>% 
-  filter(is.na(adm1_pcode)) %>% count(adm1_name,adm2_name,file_name) %>% 
+  filter(is.na(adm2_pcode)) %>% count(adm1_name,adm2_name,file_name) %>% 
   print(n=27)
 
+RB_post201905_adm3 %>%   
+  # filter(is.na(adm3_name))
+  left_join(eth_master_adm %>%
+              bind_rows(cc_operational()) %>% 
+              distinct(adm1_en,adm1_pcode,adm2_en,adm2_pcode, adm3_en,adm3_pcode), c("adm1_name"= "adm1_en","adm2_name"= "adm2_en","adm3_name"="adm3_en")) %>% 
+  select(year, month,date, adm1_name, adm1_pcode, adm2_name,adm2_pcode,adm3_name, adm3_pcode,everything()) %>% 
+  filter(is.na(adm1_pcode)) %>% 
+  count(adm1_name,adm2_name,adm3_name) #%>% 
+  print(n=27)
+
+eth_master_adm %>% 
+  filter(str_detect(adm2_en,"west_omo"))
+eth_master_adm %>% 
+  filter(str_detect(adm3_en,"west_omo"))
 
 RB_pre201905_adm2
 RB_post201905_adm2
 
 eth_master_adm %>% 
-  filter(str_detect(adm2_en,"north")) %>% 
+  filter(str_detect(adm2_en,"north_shewa")) %>% 
   count(adm1_en, adm2_en,adm3_en)
 
 RB_post201905_adm3 %>% 
@@ -55,40 +201,17 @@ The current dashboard has a heatchart like this showing % treated year (cumulati
 
 ```{r, include=T,results='asis'}
 # debugonce(heat_map_gg)
-b4_fixing <- heat_map_gg_cum_adm2(.dat = RB_pre_post_compiled,x = "popn_treated_during_current_month",grp_vars = c("year","adm1_name","adm2_name"),date_col = "date")+
-  ggtitle("heat chart - % pop treated by month",subtitle = "before attempting to fix spill over")
+b4_fixing <- RB_pre_post_compiled %>% 
+  heat_map_gg(x = date,
+              y = adm2_name,
+              fill=pct_utg_treated_yr,
+              facet_var = adm1_name)
+
 
 ggiraph::girafe(ggobj = b4_fixing)
 ```
 
 Might want to move this code later... but i'm going to make a name patch
-```{r}
-
-RB_pre_post_compiled %>% 
-  filter(str_detect(adm2_name,"refugee")) %>% distinct(adm1_name,adm2_name)
-
-RB_post201905_adm3 %>% 
-  filter(str_detect(adm3_name,"refugee")) %>% distinct(adm2_name,adm3_name)
-
-eth_master_adm %>% 
-  filter(str_detect(adm2_en,"buno")) %>% distinct(adm1_en,adm2_en,adm3_en)
-
-eth_master_adm %>% 
-  filter(str_detect(adm2_en,"gamo")) %>% distinct(adm1_en,adm2_en,adm3_en)
-
-eth_master_adm %>% 
-  filter(str_detect(adm1_en,"gamb")) %>% distinct(adm1_en,adm2_en,adm3_en)
-  
-
-# RB_pre_post_compiled %>%
-#   mutate(
-#     adm2_name = case_when(
-#       adm2_name=="north_gondar"~"west_gondar"
-#       
-#       )
-#   )
-
-```
 
 I tried fixing the spillover affects based on various set rules/algorithms, but it didn't work. It seems there are too many different ways the spillover could occur and reasons that I don't understand. Therefore, I think we might have to go with a more manual approach.
 
@@ -96,13 +219,150 @@ The above visual is interesting and potentially useful especially as a more fina
 
 ```{r, eval=F, include=F,results='asis'}
 
-
+id_spillovers(RB_post201905_adm3_dedup,"popn_treated_during_current_month",grp_vars =c("adm1_name","adm2_name","adm3_name","year"))
 # In order to fix:  I reset Jan, Feb, and March monthly treated numbers to 0 if they were with 5 % of the most recent treated number of the previous year (including October, November, December).
 
-# IF you look at `ilu_aba_boar` in year 2017 you see that 1.36 M treated in June.
 
+library(lubridate)
+ heatplot_fixing <-
+   RB_post201905_adm3 %>% 
+     complete(nesting(adm1_name,adm2_name,adm3_name),date, 
+              fill = list(
+                popn_treated_during_current_month=0,
+                villages_treated_during_current_month=0
+                )
+              ) %>% 
+     mutate(
+       month=month(date),
+       year = year(date)
+     ) %>% 
+     
+   fix_spill_adm2(adm2_issue="east_hararge",
+                  date_issue = "2021-01-01") %>%
+   fix_spill_adm2(adm2_issue="west_hararge",
+                  date_issue = "2021-01-01") %>%
+   fix_spill_adm2(adm2_issue="kefa",
+                  date_issue = "2021-01-01") %>%
+   fix_spill_adm2(adm2_issue="dawuro",
+                  date_issue = "2021-01-01") %>%
+   fix_spill_adm2(adm2_issue="dawuro",
+                  date_issue = "2020-01-01") %>%
+   fix_spill_adm2(adm2_issue="mirab_omo",
+                  date_issue = "2021-01-01") %>%
+   fix_spill_adm2(adm2_issue="bench_sheko",
+                  date_issue = "2021-01-01") %>%
+   fix_spill_adm2(adm2_issue="central_gondar",
+                  date_issue = "2021-01-01") %>%
+   fix_spill_adm2(adm2_issue="gofa",
+                  date_issue = "2021-01-01") %>%
+   fix_spill_adm2(adm2_issue="majang",
+                  date_issue = "2021-01-01") %>%
+   fix_spill_adm2(adm2_issue="sheka",
+                  date_issue = "2021-01-01") %>%
+   fix_spill_adm2(adm2_issue="south_omo",
+                  date_issue = "2021-01-01") %>%
+   fix_spill_adm2(adm2_issue="agnewak",
+                  date_issue = "2021-01-01") %>%
+     
+   heat_map_gg(x = date,
+              y= adm3_name, 
+              fill="pop_treated_monthly_fix",
+              # fill="popn_treated_during_current_month",
+              facet_var = adm2_name)
+ 
+ 
+ ggiraph::girafe(ggobj = heatplot_fixing
+                ,width_svg = 16, height_svg =25
+                )
+
+
+ 
+ # IF you look at `ilu_aba_boar` in year 2017 you see that 1.36 M treated in June.
+
+
+
+make_dv <- function(df,adm1,adm2){
+  
+  max_num_adm2 <- df %>% 
+    group_by(!!sym(adm1)) %>% 
+    summarise(
+      adm2_num_unique = length(unique(!!sym(adm2)))
+    ) %>% 
+    pull(adm2_num_unique) %>% 
+    max()
+  unique_adm1 <- unique(df[[adm1]])
+  
+  adm_list <- unique_adm1 %>% 
+    purrr::map(
+      ~ { 
+        adm2_temp <- df %>% 
+          filter(!!sym(adm1)==.x) %>% 
+          select(adm2)  %>% 
+          rename(!!sym(.x):=adm2)
+        
+        num_to_fill <- max_num_adm2 - nrow(adm2_temp)
+        
+        blank_df<- data.frame(bla= rep(NA_character_,num_to_fill)) %>% 
+          rename(!!sym(.x):=bla)
+        
+        bind_rows(adm2_temp,blank_df)
+          }
+    )
+  return(adm_list)
+
+}
+# debugonce(make_dv)
+
+reduce(bla2, cbind) %>% 
+  write.table( file=clip, sep="\t", row.names=FALSE)
+
+
+bla2 %>% 
+  purrr::map(
+    ~{
+      length = .
+      
+    }
+  )
+
+
+
+bla <-  RB_post201905_adm3 %>% 
+  select(matches("^adm\\d")) %>%
+  distinct() 
+
+bla2 <- make_dv(bla, adm1 = "adm2_name",adm2 = "adm3_name")  
+reduce(bla2, cbind) %>% 
+  write.table( file=clip, sep="\t", row.names=FALSE)
+
+bla %>% t()  
+
+pivot_wider(adm2_name,names_from= adm2_name,values_from = adm2_name)
+
+
+
+
+clip <- pipe("pbcopy", "w")                       
+write.table(my.data, file=clip, sep = '\t', row.names = FALSE)                               
+close(clip)
 
 # *central_gondar* month 1 2020 --- that's probably the remaining 50%. should just do at admin 3 level¬
+id_spillovers(df = popn_treated_during_current_month)
+RB_post201905_adm3 %>% 
+  filter(popn_treated_during_current_month!=popn_treated_during_current_month_fix)
+
+
+RB_pre_post_compiled %>% 
+  filter(popn_treated_during_current_month!=popn_treated_during_current_month_fix)
+
+after_fixing <- RB_pre_post_compiled %>% 
+  heat_map_gg(x = date,
+              y = adm2_name,
+              fill="popn_treated_during_current_month",
+              facet_var = adm1_name)
+
+
+ggiraph::girafe(ggobj = b4_fixing)
 
 after_fixing <- heat_map_gg(.dat = RB_pre_post_compiled,
                             x = "popn_treated_during_current_month_fix",
@@ -166,13 +426,13 @@ We can see the following files are missing:
 ```{r, include=T, results="asis"}
 plot_heat_monthly_adm3 <- RB_post201905_adm3 %>% 
   filter(date>="2019-05-01") %>% 
-  summarise_ploting_stats(x ="popn_treated_during_current_month",
-                          grp_vars = c("year","adm1_name","adm2_name","adm3_name"),
-                          date_col = "date") %>%
-  complete(nesting(adm1_name,adm2_name,adm3_name),date, fill = list(popn_treated_during_current_month=NA)) %>% 
+  # summarise_ploting_stats(x ="popn_treated_during_current_month",
+  #                         grp_vars = c("year","adm1_name","adm2_name","adm3_name"),
+  #                         date_col = "date") %>%
+  # complete(nesting(adm1_name,adm2_name,adm3_name),date, fill = list(popn_treated_during_current_month=NA)) %>% 
   heat_map_gg(x = date, 
               y=adm3_name,
-              fill = popn_treated_during_current_month,
+              fill = "popn_treated_during_current_month",
               facet_var = adm2_name)+
   theme(
   # axis.text.x = element_text(angle = 90),  
@@ -192,23 +452,52 @@ ggiraph::girafe(ggobj = plot_heat_monthly_adm3
 ```{r}
 
 adm3_level_names =RB_post201905_df_ls |>
-  map_dfr(
+  imap_dfr(
     ~.x %>% 
       janitor::clean_names() |>
     standardize_admin_names(data_format = "current")|>
     drop_summary_rows() |>
-    sep_adm_2_3() |>
+    sep_adm_2_3() |> 
+      mutate(file_name= .y) %>% 
     sanitize_admins() %>% 
-      select(adm1_name,adm2_name,adm3_name)
+      select(adm1_name,adm2_name,adm3_name,file_name)
 
     
   )
 
 
-adm3_level_names %>% 
-  filter(str_detect(adm2_name,"refugee")) %>% 
-  distinct()
+
+
     
+  
+
+eth_master_adm %>% 
+  filter(str_detect(adm2_en,"mirab_omo")) %>% 
+  distinct(adm1_en,adm2_en,adm3_en)
+
+
+eth_master_adm %>% 
+  filter(if_any(c("adm1_en","adm2_en","adm3_en"),
+                ~str_detect(.x,"west_omo"
+  )))
+
+RB_post201905_df_ls$`202104_ETH_CCRBLFSCHI_Monthly.xlsx` %>% View()
+
+RB_post201905_adm3 %>% 
+  filter(str_detect(adm3_name,"west_omo"))
+
+adm3_level_names %>% 
+  filter(str_detect(adm2_name,"west_omo")) %>% 
+  count(adm1_name,adm2_name,adm3_name,file_name) %>% 
+  filter(adm3_name=="west_omo")
+  
+  filter(adm3_name %in% c("am","or")) %>% 
+  count(adm1_name,adm2_name,adm3_name,file_name) %>% 
+  print(n=36)
+    
+eth_master_adm %>% 
+  filter(str_detect(adm2_en,"shewa_am")) %>% distinct(adm2_en,adm3_en)
+
 
 
 

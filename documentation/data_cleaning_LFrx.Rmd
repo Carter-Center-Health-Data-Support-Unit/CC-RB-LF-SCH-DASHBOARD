@@ -765,6 +765,7 @@ pre_post_compiled |>
 pre_post_compiled |> 
   filter(popn_treated_during_current_month>0) |> 
   ggplot(aes(x = popn_treated_during_current_month, y = adm2_name, fill=adm2_name)) +
+  
   ggridges::geom_density_ridges(rel_min_height = 0.01, scale=3, alpha = 0.7)+
   labs(title = "Population treated during current month (density)",
        )+

@@ -9,14 +9,17 @@
 #'
 #' @examples
 first_empty_row <- function(df){
-  mask_keep <- rowSums(is.na(df)) != ncol(df)
+
+    mask_keep <- rowSums(is.na(df)) != ncol(df)
+
   idx_blank <- which(mask_keep==F)
   if(length(idx_blank)>0){
-    idx_blank <-   idx_blank |> min()
+    res <- idx_blank <-   idx_blank |> min()
   }
   else{
-    idx_blank
+    res <- idx_blank
   }
+  return(res)
 
 }
 
@@ -39,16 +42,19 @@ first_empty_row <- function(df){
 #
 #'
 #' }
-extract_top_table <-  function(df){
+extract_top_table <-  function(df,pct_thresh){
+  # print(colnames(df))
   end_table_idx <- first_empty_row(df)-1
   if(length(end_table_idx)>0)
-    return(
-      df |>
+      res <- df |>
         slice(1:end_table_idx)
-    )
+
   if(length(end_table_idx)==0){
-    return(df)
+    res <- df
   }
+  # print(colnames(res))
+  # assertthat::assert_that(res %>% filter(Zone=="North Shoa-Am") %>% nrow()==0,msg = "parse top table - herest the issue")
+  return(res)
 }
 
 #' parse_top_table
@@ -60,10 +66,11 @@ extract_top_table <-  function(df){
 #'
 #' @examples
 parse_top_table <-  function(df){
-  df_top <- df |>
-    extract_top_table()
-
-    suppressMessages(readr::type_convert(df_top))
+  df_res <- df |>
+    extract_top_table(pct_thresh)
+  # assertthat::assert_that(df_res %>% filter(Zone=="North Shoa-Am") %>% nrow()==0,msg = "parse top table - herest the issue")
+    res <- suppressMessages(readr::type_convert(df_res %>% mutate(across(everything(),~as.character(.x)))))
+    return(res)
 
 }
 
