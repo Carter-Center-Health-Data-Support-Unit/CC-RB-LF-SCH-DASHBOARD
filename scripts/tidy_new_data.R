@@ -3,7 +3,7 @@ rm(list = ls())
 library(tidyverse)
 library(readxl)
 library(unheadr)
-source("function_tidy_data.R")
+source("R/function_tidy_data.R")
 
 ## !!!need to check, env variable not working
 CC_RB_LF_SCH_MONTHLY="/Users/mehedi/Library/CloudStorage/GoogleDrive-geocrunchy@gmail.com/My Drive/carter_center/RBLF/Country Monthly Reports"
