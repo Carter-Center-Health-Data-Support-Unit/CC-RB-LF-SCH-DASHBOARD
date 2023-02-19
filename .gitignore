@@ -8,3 +8,4 @@ scrap_notes.Rmd
 *.html
 **/.DS_Store
 *.rds
+*.dcf

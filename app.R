@@ -264,8 +264,7 @@ ui <- fluidPage(
     tabPanel("Overview",
              fluidRow(
              column(
-               width= 12,
-               h3("Zone Level Treatment Over Time"),
+               width= 12, align="center",
                radioButtons("ht_chart_type",label="",
                             choices = c(
                               "Monthly Treated" = "popn_treated_during_current_month",
@@ -279,9 +278,13 @@ ui <- fluidPage(
 
                ggiraph::ggiraphOutput("heat_chart",
                                       width = "100%",height="500px"),
-               h3("Ward Level Treatment Over Time"),
+
+               radioButtons("sel_adm1",label="",
+                            choices = dat_adm3$adm1_name %>% unique(),
+                            selected = "amhara", inline=TRUE),
+
                ggiraph::ggiraphOutput("heat_chart_adm3",
-                                      width = "100%", height = "5400px")
+                                      width = "100%", height = "2000px")
              )
              )
     )
@@ -463,7 +466,12 @@ server <- function(input, output,session){
       heat_map_gg(x = date,
                 y = adm2_name,
                 fill= input$ht_chart_type,
-                facet_var = adm1_name)
+                facet_var = adm1_name)+
+      ggtitle("Zone Level Figures Over Time")+
+      theme(
+        title = element_text(size=15),
+        axis.text.y =  element_text(size= 12)
+      )
 
     ggiraph::girafe(ggobj = plot_heatchart,width_svg = 16, height_svg =5)
   })
@@ -471,18 +479,22 @@ server <- function(input, output,session){
   output$heat_chart_adm3 <- ggiraph::renderggiraph({
     plot_heat_chart_adm3 <- dat_adm3 %>%
     filter(date>="2019-05-01") %>%
+      filter(adm1_name==input$sel_adm1) %>%
     # complete(nesting(adm1_name,adm2_name,adm3_name),date, fill = list(popn_treated_during_current_month=NA)) %>%
     heat_map_gg(x = date,
                 y=adm3_name,
                 fill = input$ht_chart_type,
                 facet_var = adm2_name)+
     theme(
-      text = element_text(size= 15)
-    )
+      title = element_text(size=15),
+      axis.text.y =  element_text(size= 12)
+    )+
+      ggtitle("Ward Level Figures Over Time")
+
 
   ggiraph::girafe(ggobj = plot_heat_chart_adm3,
                   width_svg = 16,
-                  height_svg =54)
+                  height_svg = adm3_heat_chart_height(input$sel_adm1))
   })
 
   output$plot_utg_remain <-  renderPlot({
