@@ -40,4 +40,16 @@ compile_tab <-  function(folder_path, which_tabs = c("RB_rx"), skip=1){
 
 
 
+adm3_heat_chart_height <- function(x){
+  chart_height <- switch(x,
+                         "amhara" =3,
+                         "benishangul_gumz"=3,
+                         "gambela"=3,
+                         "oromia"=10,
+                         "snnp"=3,
+                         "south_west_ethiopia"=10
+  )
+  return(chart_height)
+}
+
 

@@ -5,9 +5,10 @@ account: geocrunch
 server: shinyapps.io
 hostUrl: https://api.shinyapps.io/v1
 appId: 7946951
-bundleId: 6694465
+bundleId: 6802096
 url: https://geocrunch.shinyapps.io/CC-RB-LF-SCH-DASHBOARD/
-when: 1672778881.94266
-lastSyncTime: 1672778881.94268
+when: 1675344227.3568
+lastSyncTime: 1675344227.35681
 asMultiple: FALSE
 asStatic: FALSE
+ignoredFiles: _targets.R|_targets.Rmd|%|colname_harmonization_lookup.xlsx|dashboard graph.R|eth_adm2_level_playdata.csv|README_files/figure-gfm/pressure-1.png|README.md|README.Rmd|run.R|run.sh|scripts/.gitkeep|testing.R|tests/testthat.R|_targets|documentation
