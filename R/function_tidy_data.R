@@ -72,7 +72,7 @@ bind_data <- function(df_list, needed_cols) {
 
   to_ignore <- check_status_not_found$dataframe_name
 
-  if(length(to_ignore)>0){warning(paste0(to_ignore, " was/were ignored due to missing columns. Have a look to check_column df from the output list"))}
+  if(length(to_ignore)>0){warning(paste0(to_ignore, " was/were ignored due to missing column(s). Have a look at check_column df from the output list"))}
 
   df_list_to_bind <- df_list[!names(df_list) %in% to_ignore]
 
