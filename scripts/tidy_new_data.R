@@ -1,7 +1,7 @@
 rm(list = ls())
 
 library(tidyverse)
-library(readxl)
+library(openxlsx)
 library(unheadr)
 source("R/function_tidy_data.R")
 
@@ -16,3 +16,22 @@ df_list <- read_data(data_path = path,sheet_contains = "Total",
 
 ## check if the column name accross the dataframes are matching
 check_cols <- df_list %>% check_cols_name()
+
+
+######### test data
+needed_cols <- c("name_of_woredas", "number_of_hd_as", "census_population",
+                 "eligible_population", "treated_population_5_14_years_male",
+                 "treated_population_5_14_years_female", "treated_population_15_years_above_male",
+                 "treated_population_15_years_above_female", "treated_population_total_treated",
+                 "tc", "utg", "not_treated_population_absentees", "not_treated_population_refusals",
+                 "not_treated_population_s_sick", "not_treated_population_pregnants",
+                 "not_treated_population_5_yrs_old_children", "not_treated_population_lactating_mothers_1_week",
+                 "not_treated_population_total_not_treated", "ivermectin_balance_received",
+                 "ivermectin_balance_distributed", "ivermectin_balance_wasted",
+                 "ivermectin_balance_remained", "ivermectin_balance_i_p",
+                 "filename", "tab_name")
+
+output <- bind_data(df_list,needed_cols = needed_cols)
+
+output$check_status
+output$binded_df
