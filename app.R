@@ -272,7 +272,9 @@ ui <- fluidPage(
                               "% UTG reached" = "pct_utg_treated_yr",
                               "% UTG reached (fix)"="pct_utg_treated_yr_fix",
                               "Yearly Cumulative" ="cum_treated_yr",
-                              "Yearly Cumulative (fix)" ="cum_treated_yr_fix"
+                              "Yearly Cumulative (fix)" ="cum_treated_yr_fix",
+                              "Villages Treated" = "villages_treated_during_current_month",
+                              "% Village Treated" = "pct_villages_yr"
                             ),selected = "popn_treated_during_current_month", inline=TRUE),
 
 

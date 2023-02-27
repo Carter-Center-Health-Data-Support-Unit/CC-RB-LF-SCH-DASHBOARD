@@ -293,7 +293,11 @@ heat_map_gg <- function(.dat,x,y,fill,facet_var){
                                                              Monthly treated: {abbreviate_large_numbers(popn_treated_during_current_month)}<br>
                                                              Monthly treated (fix): {abbreviate_large_numbers(pop_treated_monthly_fix)}<br>
                                                              Yearly cumulative ({year}): {abbreviate_large_numbers(cum_treated_yr)}<br>
-                                                             % goal treated: {round(pct_utg_treated_yr*100,1)}<br>",
+                                                             % goal treated: {round(pct_utg_treated_yr*100,1)}<br>
+                                                             Villages treated (monthly): {villages_treated_during_current_month}<br>
+                                                             Village treated (cumulative): {cum_villages_yr}<br>
+                                                             % Villages treated: {round(pct_villages_yr*100,1)}<br>",
+
 
                                        )),color="grey")+
     geom_vline(xintercept = lubridate::ymd(c(
