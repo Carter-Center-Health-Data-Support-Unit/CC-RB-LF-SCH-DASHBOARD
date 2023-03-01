@@ -98,6 +98,13 @@ bind_data <- function(df_list, needed_cols) {
 }
 
 
+######## Summarise accros ######
+
+summarise_accross<- function(df,group_cols,cols){
+  type.convert(df) %>% group_by(!!!syms(group_cols)) %>%
+    summarise(across(cols,~sum(.x,na.rm = T)),.groups = "drop")
+}
+
 
 
 

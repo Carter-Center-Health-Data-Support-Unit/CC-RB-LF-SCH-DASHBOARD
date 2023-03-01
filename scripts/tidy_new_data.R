@@ -17,9 +17,8 @@ df_list <- read_data(data_path = path,sheet_contains = "Total",
                cols_words_replace_to_na = c("x_","_for_oncho_lf"))
 df_list$dawuro_zone_total$round
 
-## check if the column name accross the dataframes are matching
+## check if the column name accross the dataframes are matching or not, Only for getting the general idea.
 check_cols <- df_list %>% check_cols_name()
-
 
 ######### test data
 needed_cols <- c("base_name","round","year","month","admin_2","name_of_woredas", "number_of_hd_as", "census_population",
@@ -36,7 +35,17 @@ needed_cols <- c("base_name","round","year","month","admin_2","name_of_woredas",
 
 output <- bind_data(df_list,needed_cols = needed_cols)
 
-check_cols_name(df_list)
-output$binded_df -> a
 
+### Summarizing
+co <- c("treated_population_5_14_years_male",
+        "treated_population_5_14_years_female", "treated_population_15_years_above_male",
+        "treated_population_15_years_above_female", "treated_population_total_treated")
+summarise_df <- summarise_accross(df = output$binded_df,group_cols = "admin_2",cols = co)
+
+#### checking if the total treated is accurate or not
+col <- co[!co %in% "treated_population_total_treated"]
+
+summarise_df <- summarise_df %>% mutate(
+  total = rowSums(summarise_df[col],na.rm=T)
+) %>% filter(total ==treated_population_total_treated)
 
