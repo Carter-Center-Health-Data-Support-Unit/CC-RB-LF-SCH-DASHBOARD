@@ -1,8 +1,10 @@
 rm(list = ls())
 
 library(tidyverse)
+library(readxl)
 library(openxlsx)
 library(unheadr)
+library(zoo)
 source("R/function_tidy_data.R")
 
 ## !!!need to check, env variable not working
@@ -13,13 +15,14 @@ path <-  paste0(CC_RB_LF_SCH_MONTHLY,"/ETH/new_format_example/202203/202203_r1_d
 ### reading the dataset
 df_list <- read_data(data_path = path,sheet_contains = "Total",
                cols_words_replace_to_na = c("x_","_for_oncho_lf"))
+df_list$dawuro_zone_total$round
 
 ## check if the column name accross the dataframes are matching
 check_cols <- df_list %>% check_cols_name()
 
 
 ######### test data
-needed_cols <- c("name_of_woredas", "number_of_hd_as", "census_population",
+needed_cols <- c("base_name","round","year","month","admin_2","name_of_woredas", "number_of_hd_as", "census_population",
                  "eligible_population", "treated_population_5_14_years_male",
                  "treated_population_5_14_years_female", "treated_population_15_years_above_male",
                  "treated_population_15_years_above_female", "treated_population_total_treated",
@@ -29,9 +32,11 @@ needed_cols <- c("name_of_woredas", "number_of_hd_as", "census_population",
                  "not_treated_population_total_not_treated", "ivermectin_balance_received",
                  "ivermectin_balance_distributed", "ivermectin_balance_wasted",
                  "ivermectin_balance_remained", "ivermectin_balance_i_p",
-                 "filename", "tab_name")
+                 "filename", "admin_2","base_name","round","year","month")
 
 output <- bind_data(df_list,needed_cols = needed_cols)
 
-output$check_status
-output$binded_df
+check_cols_name(df_list)
+output$binded_df -> a
+
+

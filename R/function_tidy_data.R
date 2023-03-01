@@ -13,13 +13,26 @@ read_data <- function(data_path =path,
 
   df_all <- list()
   for (i in sheets_name) {
+
+    base_name <- basename(path)
+    round_number <- str_split_1(base_name,pattern = "_")[[2]]
+    year_month <-str_split_1(base_name,pattern = "_")[[1]]
+    year <-as.yearmon(year_month,"%Y%m") %>% year
+    month <-as.yearmon(year_month,"%Y%m") %>% month()
+
     data_read <- read.xlsx(data_path,sheet = i,skipEmptyRows = T,
                            skipEmptyCols = T,
                            startRow = 2,
                            fillMergedCells = T)  %>%
       type.convert()  %>% mash_colnames(n_name_rows = 3,sep = ".") %>%
-      mutate(filename = paste0(data_path),
-             tab_name = i)
+      mutate(filename = data_path,
+             admin_2 = str_replace_all(i," Total| total",""),
+             base_name = base_name,
+             round =round_number,
+             year = year,
+             month =month)
+
+
     names(data_read) <- names(data_read) %>% snakecase::to_snake_case() %>%
       str_replace_all(cols_replace_to_na,"")
     names(data_read) <- gsub("^[0-9]+[//_]","",names(data_read))
@@ -76,7 +89,7 @@ bind_data <- function(df_list, needed_cols) {
 
   df_list_to_bind <- df_list[!names(df_list) %in% to_ignore]
 
- binded_df <- do.call("bind_rows",df_list_to_bind)
+ binded_df <- do.call("bind_rows",df_list_to_bind) %>% select(needed_cols)
 
  return(list(
    check_status = check_status,
