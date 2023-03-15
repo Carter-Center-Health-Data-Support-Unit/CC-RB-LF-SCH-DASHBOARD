@@ -5,11 +5,10 @@ library(readxl)
 library(openxlsx)
 library(unheadr)
 library(zoo)
+library(lubridate)
 source("R/function_tidy_data.R")
 
-## !!!need to check, env variable not working
-CC_RB_LF_SCH_MONTHLY="/Users/mehedi/Library/CloudStorage/GoogleDrive-geocrunchy@gmail.com/My Drive/carter_center/RBLF/Country Monthly Reports"
-path <-  paste0(CC_RB_LF_SCH_MONTHLY,"/ETH/new_format_example/202203/202203_r1_dawuro_konta_20230218.xlsx")
+path <-  paste0(Sys.getenv("CC_RB_LF_SCH_MONTHLY"),"/ETH/new_format_example/202203/202203_r1_dawuro_konta_20230218.xlsx")
 
 
 ### reading the dataset
@@ -35,6 +34,8 @@ needed_cols <- c("base_name","round","year","month","admin_2","name_of_woredas",
 
 output <- bind_data(df_list,needed_cols = needed_cols)
 
+output$check_status
+output$binded_df
 
 ### Summarizing
 co <- c("treated_population_5_14_years_male",
@@ -48,4 +49,12 @@ col <- co[!co %in% "treated_population_total_treated"]
 summarise_df <- summarise_df %>% mutate(
   total = rowSums(summarise_df[col],na.rm=T)
 ) %>% filter(total ==treated_population_total_treated)
+
+
+
+###### next ######
+# pipeline to output
+
+
+
 
