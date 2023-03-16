@@ -293,7 +293,11 @@ heat_map_gg <- function(.dat,x,y,fill,facet_var){
                                                              Monthly treated: {abbreviate_large_numbers(popn_treated_during_current_month)}<br>
                                                              Monthly treated (fix): {abbreviate_large_numbers(pop_treated_monthly_fix)}<br>
                                                              Yearly cumulative ({year}): {abbreviate_large_numbers(cum_treated_yr)}<br>
-                                                             % goal treated: {round(pct_utg_treated_yr*100,1)}<br>",
+                                                             % goal treated: {round(pct_utg_treated_yr*100,1)}<br>
+                                                             Villages treated (monthly): {villages_treated_during_current_month}<br>
+                                                             Village treated (cumulative): {cum_villages_yr}<br>
+                                                             % Villages treated: {round(pct_villages_yr*100,1)}<br>",
+
 
                                        )),color="grey")+
     geom_vline(xintercept = lubridate::ymd(c(
@@ -309,6 +313,91 @@ heat_map_gg <- function(.dat,x,y,fill,facet_var){
 
 
 }
+
+
+
+#' Title
+#'
+#' @param .dat
+#' @param x
+#' @param y
+#' @param color
+#' @param facet_var
+#'
+#' @return
+#' @export
+#'
+#' @examples \dontrun{
+#' dat_adm2 %>%
+#'   facet_line_gg(x = "date",
+#'                 y = "pct_pop_treated_yr_fix",
+#'                 color= "pct_pop_treated_yr_fix",
+#'                 facet_var = adm1_name)}
+#'
+facet_line_gg <- function(.dat,x,y,color,facet_var){
+
+
+
+  p_base <- .dat |>
+    ggplot2::ggplot()+
+    ggplot2::scale_x_date(
+      date_breaks = "3 months",
+      date_minor_breaks = "1 month",
+      date_labels = "%b-%y",expand = c(0,0)
+      )+
+    ggplot2::theme_bw()+
+    # ggplot2::facet_wrap(facets = vars({{facet_var}}))+
+    ggplot2::facet_grid(rows = vars({{facet_var}}),
+                        switch = "both",
+                        scales = "free",
+                        space = "free"
+    ) +
+    ggplot2::theme(
+      legend.position = "none",
+      legend.title = element_blank(),
+      legend.margin=margin(0,0,0,0),
+      legend.key.width = unit(3,"line"),
+      legend.key.height = unit(1,"line"),
+      legend.text = element_text(size = 12),
+      axis.title.x = element_blank(),
+      axis.text.x = element_text(angle = 90),
+      axis.title.y = element_blank(),
+      panel.spacing = unit(0, "lines"),
+      strip.background = element_blank(),
+      strip.placement = "left"
+    )+
+    guides(fill = guide_legend(label.position = "bottom",nrow=1))
+
+  pf <- p_base+
+    ggplot2::geom_line(aes(x= !!sym(x),
+                           y= !!sym(y),
+                           color=adm2_name,
+                           group=adm2_name
+
+
+
+                                       ))+
+    geom_vline(xintercept = lubridate::ymd(c(
+      "2016-12-31",
+      "2017-12-31",
+      "2018-12-31",
+      "2019-12-31",
+      "2020-12-31",
+      "2021-12-31"
+    )))
+  if(str_detect(y,"^pct_")){
+   pff <- pf+
+      scale_y_continuous(labels = scales::percent)
+  }else{
+    pff <- pf+
+      scale_y_continuous(labels = scales::comma)
+  }
+
+
+  return(pff)
+
+}
+
 
 
 # RB_pre_post_compiled |>
