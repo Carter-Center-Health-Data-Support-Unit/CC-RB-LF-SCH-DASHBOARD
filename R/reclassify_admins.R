@@ -689,7 +689,7 @@ join_master_admin_to_pre201905_data <- function(df_list, master_adm){
 # }
 
 # for current data
-bind_rows_add_dates_fill_pop <-  function(df_list, data_format= "current"){
+bind_rows_add_dates <-  function(df_list, data_format= "current"){
   w_dates <- purrr::map_dfr(df_list,~.x %>%
                               mutate(
                                 across(everything(), ~as.character(.x)))

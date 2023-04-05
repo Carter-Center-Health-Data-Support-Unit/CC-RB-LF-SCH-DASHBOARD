@@ -7,6 +7,7 @@
 library(targets)
 library(lubridate)
 library(tidyverse)
+library(janitor)
 # library(tarchetypes) # Load other packages as needed. # nolint
 
 # Set target options:
@@ -43,6 +44,45 @@ list(
   tar_target(RB_pre201905_df_ls,
                compile_tab(folder_path = data_dir, which_tabs = "Active TX UTG2",skip = 2 )
   ),
+  tar_target(RB_post_training_data,
+               compile_tab(folder_path = data_dir, which_tabs = "RB_training",skip = 0 ) %>%
+               map(
+                 \(df_temp){
+                   df_temp %>%
+                     unheadr::mash_colnames(n_name_rows = 4,sliding_headers = T) %>%
+                     clean_names() %>%
+                     mutate(
+                       uid = row_number(),
+                       across(everything(),~as.character(.x))
+                     ) %>%
+                     pivot_longer(-uid) %>%
+                     mutate(
+                       name= case_when(
+                         str_detect(name,"zone")~"Zone",
+                         str_detect(name, "region")~"region",
+                         str_detect(name,"name_of_woredas")~"name_of_woredas",
+                         str_detect(name,"number_of_communities")~"number_of_communities",
+                         str_detect(name,"d_ds_actual_trained_in_current_month_ato")~"cdd_ato",
+                         str_detect(name,"drug_distributors_cd_ds_new")~"cdd_new",
+                         str_detect(name,"drug_distributors_cd_ds_refresher")~"cdd_refresher",
+                         str_detect(name,"cs_actual_trained_in_current_month_ato")~"cs_ato",
+                         str_detect(name,"cs_new")~"cs_new",
+                         str_detect(name,"cs_refresher")~"cs_refresher",
+                         str_detect(name,"h_ws_actual_trained_in_current_month_ato")~"hw_ato",
+                         str_detect(name,"h_ws_new")~"hw_new",
+                         str_detect(name,"h_ws_refresher")~"hw_refresher",
+                         TRUE~name
+                       )
+                     ) %>%
+                     pivot_wider(id_cols = uid) %>%
+                     select(any_of(c("Zone", "region", "name_of_woredas", "number_of_communities")),
+                            matches("_refresher$|_new$|_ato$")) %>%
+                     mutate(across(everything(),~as.character(.x)))
+                 }
+
+               )
+
+  ),
   # track master file
   tar_target(eth_master_adm_fp,
              here::here("data/eth_adm_master.rds"), format = "file"
@@ -70,6 +110,29 @@ list(
   tar_target(
     name = RB_post201905_df_ls_clean1,
     command = extract_pre_clean_names_adms_batch(df_list =RB_post201905_df_ls,data_format = "current" )
+  ),
+  tar_target(
+    name = RB_post201905_training_compiled,
+    command = extract_pre_clean_names_adms_batch(df_list =RB_post_training_data,data_format = "current" ) %>%
+      map(\(df_temp){
+        df_temp %>%
+          mutate(
+            across(everything(), ~as.character(.x))
+          )%>%
+          mutate(
+            year=str_sub(string = file_name,start = 1,end = 4) |> as.numeric(),
+            month=str_sub(string = file_name,start = 5,end = 6) |> as.numeric(),
+            date= lubridate::ymd(glue::glue("{year}-{month}-01")),
+            reporting_level= "admin 3"
+          ) |>
+          mutate(
+            across(everything(), ~as.character(.x))
+          )
+      }
+      ) %>%
+      bind_rows() %>%
+      readr::type_convert()
+
   ),
   tar_target(
     name = RB_post201905_adm3_compiled,
