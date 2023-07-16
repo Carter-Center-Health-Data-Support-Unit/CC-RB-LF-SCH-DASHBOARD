@@ -136,7 +136,7 @@ list(
   ),
   tar_target(
     name = RB_post201905_adm3_compiled,
-    command = bind_rows_add_dates_fill_pop(df_list =RB_post201905_df_ls_clean1,data_format = "current")
+    command = bind_rows_add_dates(df_list =RB_post201905_df_ls_clean1,data_format = "current")
   ),
   tar_target(name=RB_post201905_adm3_dedup,
              command=deduplicate(df=RB_post201905_adm3_compiled,adm1_name,adm2_name,adm3_name,date)
@@ -306,7 +306,7 @@ list(
   ),
   tar_target(
     name = LFrx_post201905_adm3,
-    command = bind_rows_add_dates_fill_pop(df_list =LFrx_post201905_df_ls_clean1)
+    command = bind_rows_add_dates(df_list =LFrx_post201905_df_ls_clean1)
   ),
   tar_target(
     name = LFrx_post201905_adm2,

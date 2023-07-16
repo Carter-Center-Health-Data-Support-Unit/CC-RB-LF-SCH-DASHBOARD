@@ -1,0 +1,321 @@
+---
+title: "cleaning_raw_data_catalogue"
+author: "Zack Arno"
+date: '2022-10-07'
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r libraries}
+library(tidyverse)
+library(usethis)
+library(here)
+library(janitor)
+library(targets)
+
+tar_source()
+
+tar_load(RB_post201905_training_compiled)
+```
+
+
+What is number of communities? looks like values are basically repeated over and over until they change
+```{r}
+RB_post201905_training_compiled %>% 
+  summarise(
+    num_comms = sum(as.numeric(number_of_communities),na.rm = T),
+    .by = c("date","adm1_name")
+    ) %>% 
+  ggplot(aes(x= date, y= num_comms))+
+  geom_point()+
+  facet_wrap(~adm1_name,scales = "free_y")
+
+```
+
+at adm2 this holds up as well...
+```{r}
+RB_post201905_training_compiled %>% 
+  summarise(
+    num_comms = sum(as.numeric(number_of_communities),na.rm = T),
+    .by = c("date","adm1_name","adm2_name")
+    ) %>% 
+  ggplot(aes(x= date, y= num_comms, color=adm2_name))+
+  geom_point()+
+  facet_wrap(~adm1_name,scales = "free_y")
+
+```
+
+```{r}
+RB_post201905_training_compiled %>% 
+  filter(if_any())
+
+RB_tr <- RB_post201905_training_compiled %>% 
+  mutate(
+    across(matches("_new$|_ato$|_refresher$"),
+           \(col){
+             replace_na(as.numeric(col),0)
+           }
+    )
+  ) %>% tibble()
+
+
+# Look at number of unique training values per year... 
+RB_tr_unique_yr <- RB_tr %>% 
+  group_by(adm1_name,adm2_name,adm3_name, year) %>% 
+  summarise(
+    across(matches("_new$|_ato$|_refresher$"),
+           ~n_distinct(.x)
+           )
+  ) %>% 
+  ungroup() %>% 
+  pivot_longer(
+    matches("_new$|_ato$|_refresher$")
+  ) 
+  
+# mainly 1 or 2 values....
+RB_tr_unique_yr %>% 
+  ggplot(aes(x=value))+
+  geom_histogram()
+
+# maybe useful to figure out wheen they occur?
+p_trained <- unique(RB_tr$adm3_name) %>% 
+  map(
+    ~ RB_tr %>%  
+  pivot_longer(
+    matches("_new$|_ato$|_refresher$")
+  ) %>% 
+  filter(value!=0) %>% 
+  filter(adm3_name==.x) %>% 
+  ggplot(aes(x=date, y= value, color=adm3_name))+
+  geom_point()+
+  facet_wrap(~name)
+  ) %>% 
+  set_names(unique(RB_tr$adm3_name))
+
+# okay using what we have below  can we assign training to 2 groups
+RB_tr_unique <- RB_tr %>% 
+  pivot_longer(
+    matches("_new$|_ato$|_refresher$")
+  ) %>% 
+  group_by(adm1_name,adm2_name, adm3_name, year,name) %>% 
+  summarise(
+    n_val = n_distinct(value),
+    .groups = "drop"
+  )
+RB_tr_unique %>% 
+  ggplot(aes(x= n_val))+
+  geom_histogram(stat= "count")
+
+
+# think we should almost nearly be there once we fix the dates.
+ RB_tr %>% 
+  pivot_longer(
+    matches("_new$|_ato$|_refresher$")
+  ) %>% 
+  filter(value!=0) %>% 
+  group_by(adm1_name,adm2_name, adm3_name, year,name,value) %>% 
+  filter(date==min(date)) %>% 
+   arrange(adm1_name,adm2_name, adm3_name,name,date) %>% 
+   ungroup() %>% 
+   group_by(adm1_name,adm2_name, adm3_name, year,name) %>% 
+   # number rounds per year
+   mutate(
+     n = n()
+   )
+   
+```
+
+Q for emily- can we assign training to R1 or R2 also?
+
+jumping through plots below we see that some woredas don't have the same length record.
+We also see that it appears the values were back-filled & numbers trained don't accumulate.
+```{r}
+p_trained$bita
+```
+
+Therefore is it possible to use more data to understand when the rounds began/ended? then we could properly associate the trainings w/ dates?
+
+```{r}
+
+tar_load(RB_post201905_adm3)
+p_treated_mo <- unique(RB_tr$adm3_name) %>% 
+  map(
+    ~ RB_post201905_adm3 %>% 
+      filter(adm3_name==.x) %>% 
+      ggplot(aes(x=date,y=popn_treated_during_current_month))+
+      geom_point()
+  ) %>% 
+  set_names(
+    unique(RB_tr$adm3_name)
+  )
+
+  
+p_treated_mo$jawi
+
+RB_post201905_adm3 %>% 
+  # group_by(year) %>%
+  summarise(
+    n_unique= n_distinct(adm3_name)
+  )
+RB_post201905_adm3 %>%
+  group_by(year) %>%
+  summarise(
+    n_unique= n_distinct(adm3_name)
+  )
+
+# very unclear how you can know programmitically determine if numbers are cumulative
+RB_post201905_adm3 %>% 
+  filter(
+    popn_treated_during_current_month!=0
+  ) %>% 
+  group_by(adm1_name,adm2_name,adm3_name, year) %>% 
+  mutate(
+    distinct_num_treated= n_distinct(popn_treated_during_current_month)
+  ) %>% 
+  filter(distinct_num_treated>2) %>% 
+  glimpse()
+
+# maybe I can use pop_treated_round1 & 2
+RB_post201905_adm3 %>% 
+  filter(
+    popn_treated_during_current_month!=0
+  ) %>% 
+  group_by(adm1_name,adm2_name,adm3_name, year) %>% 
+  mutate(
+    distinct_num_treated= n_distinct(popn_treated_during_current_month)
+    ) %>% 
+  ungroup() %>% 
+  mutate(
+    m_val_eq_r1 = popn_treated_during_current_month==popn_treated_round1,
+    m_val_eq_r2 = popn_treated_during_current_month==popn_treated_round2,
+    m_val_eq_r1r2 = m_val_eq_r1| m_val_eq_r2
+  ) %>% 
+  select(date,adm3_name,starts_with("popn_"),starts_with("m_val")) %>% 
+  arrange(adm3_name)
+
+# above looking at Adobo... looks like 
+# - 2020-01 would be r2 2019
+# - 2020 then has only 1 round recorded in 2021-01-01 (en dof 2021)
+
+
+# this seems useful.... we can call june-Aug R1 safely
+RB_post201905_adm3 %>% 
+  filter(
+    popn_treated_during_current_month!=0
+  ) %>% 
+  mutate(
+    month_chr = month(date,label=T,abbr = T)
+  ) %>% 
+  ggplot(aes(
+    x= month_chr
+  ))+
+  geom_histogram(stat="count")
+
+
+
+RB_post201905_adm3 %>% 
+  filter(
+    popn_treated_during_current_month!=0
+  ) %>% 
+  filter(month(date)==7) %>% 
+  filter(!is.na(popn_treated_round2))
+
+
+# really need to label the rounds
+RB_treat_r_lab <- RB_post201905_adm3 %>% 
+  filter(
+    popn_treated_during_current_month!=0
+  ) %>% 
+  group_by(adm1_name,adm2_name,adm3_name, year) %>% 
+  mutate(
+    distinct_num_treated= n_distinct(popn_treated_during_current_month)
+    ) %>% 
+  ungroup() %>% 
+  mutate(
+    m_val_eq_r1 = popn_treated_during_current_month==popn_treated_round1,
+    m_val_eq_r2 = popn_treated_during_current_month==popn_treated_round2,
+    m_val_eq_r1r2 = m_val_eq_r1| m_val_eq_r2,
+    round = case_when(
+      m_val_eq_r1~ "R1",
+      m_val_eq_r2 ~ "R2",
+      is.na(popn_treated_round2)~"R1",
+      .default= "unknown"
+    )
+  )
+
+RB_treat_r_lab %>% 
+  mutate(
+    month_chr = month(date,label=T,abbr = T)
+  ) %>% 
+  ggplot(aes(
+    x= month_chr
+  ))+
+  geom_histogram(stat="count")+
+  facet_wrap("round")
+```
+
+look at weird ones where round & months seem out of place
+
+- R2 looks pretty good except the few in July & Aug... these are all 2022...
+- I think they should just be changed to round 1
+- R2 Nov vals looks right as pop treated r2 figs match monthly treated
+- Feb R1 onwards look good
+
+- therefore after fixing few things we go w/ 
+  + Feb-Oct : R1 
+  + Nov-Jan: R2
+
+```{r}
+RB_treat_r_lab %>% 
+  filter(round =="R2",
+         month %in% c(11)
+         ) %>% 
+  glimpse()
+RB_treat_r_lab %>% 
+  filter(round =="R1",
+         month %in% c(10)
+         ) %>% 
+  glimpse()
+
+# all RB treatments in 2022 are in july aug files.
+RB_treat_r_lab %>% 
+  filter(year==2022,
+         month %in% c(7,8)
+         ) %>% View()
+
+# round cleaned1
+RB_treat_r_c1 <- RB_treat_r_lab %>% 
+  mutate(
+    round_fix =case_when(
+      round =="R2" & month %in% c(7,8)~"R1",
+      adm_1_2_3=="oromia-jimma-sekoru" &
+        date=="2020-01-01" ~ "R2",
+      .default = round
+    ) 
+    ) 
+
+RB_treat_r_c1 %>% 
+   mutate(
+    month_chr = month(date,label=T,abbr = T)
+  ) %>% 
+  ggplot(aes(
+    x= month_chr
+  ))+
+  geom_histogram(stat="count")+
+  facet_wrap(~round_fix)
+```
+
+Therefore we will move January R2 to December
+
+```{r}
+RB_treat_r_c1 %>% 
+  filter(
+    round =="R2",month==1
+  ) %>% 
+  select(date,starts_with("popn")) %>% 
+  mutate(date_fix = floor_date(date- month(1),"month"))
+
+```
