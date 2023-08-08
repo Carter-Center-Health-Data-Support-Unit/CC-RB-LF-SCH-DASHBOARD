@@ -95,4 +95,51 @@ adm3_heat_chart_height <- function(x){
   return(chart_height)
 }
 
+read_zipped_layer <- function(path,layer){
+  tmp_dir <- tempfile()
+  unzip(path, exdir = tmp_dir)
+  ret <- layer %>%
+    map(
+      ~st_read(tmp_dir,.x)
+    )
+  on.exit(unlink(tmp_dir), add = TRUE)
+  return(ret)
+}
+
+#' Title
+#'
+#' @param path
+#'
+#' @return
+#' @export
+#'
+#' @examples \dontrun{
+#' library(sf)
+#' library(tidyverse)
+#' list_zipped_shape_layers(path = "/Users/zackarno/Downloads/Ethiopia_AdminBoundaries (1).zip")
+#' adm4 <- read_zipped_layer(path = "/Users/zackarno/Downloads/Ethiopia_AdminBoundaries (1).zip",
+#'                           layer ="Ethiopia_AdminBoundaries"  )
+#' adm3 <- read_zipped_layer(path = "/Users/zackarno/Downloads/Ethiopia_AdminBoundaries.zip",
+#'                           layer ="Ethiopia_AdminBoundaries"  )
+#' adm4 %>%
+#'   pluck(1) %>%
+#'   filter(
+#'   str_detect(RK_NAME,"Maj")
+#'   )
+#' adm3 %>%
+#'   pluck(1) %>%
+#'   filter(
+#'   str_detect(WOREDANAME,"Maj")
+#'   )
+#'}
+list_zipped_shape_layers <- function(path){
+  tmp_dir <- tempfile()
+  unzip(path, exdir = tmp_dir)
+  return(sf::st_layers(tmp_dir))
+  on.exit(unlink(tmp_dir), add = TRUE)
+
+}
+
+
+
 

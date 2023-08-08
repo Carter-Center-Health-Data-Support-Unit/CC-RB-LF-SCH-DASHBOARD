@@ -317,5 +317,67 @@ RB_treat_r_c1 %>%
   ) %>% 
   select(date,starts_with("popn")) %>% 
   mutate(date_fix = floor_date(date- month(1),"month"))
+```
 
+The code above has been distilled into this target lets check it out -- I like it.
+```{r}
+tar_load(RB_adm3_w_r)
+RB_adm3_w_r %>% 
+  mutate(
+    month_chr = month(date_fix,label=T,abbr = T)
+  ) %>% 
+  filter(popn_treated_during_current_month!=0) %>% 
+  ggplot(aes(
+    x= month_chr
+  ))+
+  geom_histogram(stat="count")+
+  facet_wrap(~round_adj)
+```
+
+can i use this to define round dates? - transfer that to trainnig data?
+```{r}
+df_simp <- RB_adm3_w_r %>% 
+  filter(popn_treated_during_current_month!=0) %>% 
+  select(matches("^adm\\d"),
+         date,
+         date_fix,
+         year_fix,
+         month_fix,
+        popn_treated_during_current_month,
+        round_adj)
+
+# fine if n=1 (means no round for woreda)
+# fine if n=2 (both rounds occured)
+# n=3 we might want to check out in more detail
+df_simp %>% 
+  group_by(adm1_name,
+           adm2_name,
+           adm3_name,
+           year_fix) %>% 
+  summarise(
+    n=n()
+  ) %>% 
+  filter(n>2)
+
+```
+
+
+Something else I wanted to do w/ unique values....
+...
+map when the rounds occur
+make adm3_name colors?
+```{r}
+df_simp %>% 
+  mutate(
+     month_chr = month(date_fix,label=T,abbr = T)
+  ) %>% 
+  ggplot(
+    aes(
+      x=adm2_name,
+      y= month_chr
+    )
+  )+
+  geom_point()+
+  coord_flip()+
+  facet_wrap(~round_adj)
 ```

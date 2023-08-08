@@ -23,7 +23,8 @@ options(clustermq.scheduler = "multiprocess")
 # Install packages {{future}}, {{future.callr}}, and {{future.batchtools}} to allow use_targets() to configure tar_make_future() options.
 
 # Load the R scripts with your custom functions:
-lapply(list.files("R", full.names = TRUE, recursive = TRUE), source)
+# lapply(list.files("R", full.names = TRUE, recursive = TRUE), source)
+tar_source()
 # source("other_functions.R") # Source other scripts as needed. # nolint
 
 
@@ -131,7 +132,7 @@ list(
       }
       ) %>%
       bind_rows() %>%
-      readr::type_convert()
+      type_convert()
 
   ),
   tar_target(
@@ -219,7 +220,50 @@ list(
 
                )
                ),
+  tar_target(
+    # w/ round labelled
+    name= RB_adm3_w_r,
+    command= RB_post201905_adm3 %>%
+      # this group_by() -> ungroup() chunk is currently not needed, but just copied from
+      # RB_training_data.Rmd
+      group_by(adm1_name,adm2_name,adm3_name, year) %>%
+      mutate(
+        distinct_num_treated= n_distinct(popn_treated_during_current_month)
+      ) %>%
+      ungroup() %>%
+      mutate(
 
+        # logicals to classify ~ 99 % of rounds correctly
+        m_val_eq_r1 =popn_treated_during_current_month!=0 &( popn_treated_during_current_month==popn_treated_round1),
+        m_val_eq_r2 = popn_treated_during_current_month!=0 & (popn_treated_during_current_month==popn_treated_round2),
+        m_val_eq_r1r2 = m_val_eq_r1| m_val_eq_r2,
+
+        round = case_when(
+          # if monthly value = that of R1 label as R1
+          m_val_eq_r1~ "R1",
+          # if monthly value = that of R2 label as R2
+          m_val_eq_r2 ~ "R2",
+          # R2 value is NA give R1
+          is.na(popn_treated_round2)~"R1",
+          .default= "unknown"
+        ),
+        # a couple weird ones that I think got mislabelled (probably the round treated vals)
+        round_adj =case_when(
+          round =="R2" & month %in% c(7,8)~"R1",
+          adm_1_2_3=="oromia-jimma-sekoru" &
+            date=="2020-01-01" ~ "R2",
+          .default = round
+      ),
+      # so all Jan values should be R2, but set back on month so they register as R2 for prev year.
+      date_fix = case_when(
+        round_adj =="R2" & month ==1 ~ floor_date(date- month(1),"month"),
+        .default= date
+      ),
+      # re- calc
+      year_fix = year(date_fix),
+      month_fix = month(date_fix)
+  )
+  ),
 
   # we need to make two data sets from current: a.) admin 2 level (for binding with old), admin 3 level
   tar_target(
@@ -351,7 +395,7 @@ tar_target(
 
 tar_target(
   name = LFrx_pre_post_compiled,
-  command = dplyr::bind_rows(LFrx_pre201905_adm2,LFrx_post201905_adm2)
+  command = bind_rows(LFrx_pre201905_adm2,LFrx_post201905_adm2)
 )
 
 )
