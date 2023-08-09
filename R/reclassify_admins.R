@@ -457,18 +457,17 @@ standardize_admin_names <-  function(df,data_format="current"){
       dplyr::rename(
         adm1_name = "region",
         adm2_name = "zone",
-        adm3_name = "name_of_woredas"
-      )
+      ) %>%
+      clean_names() %>%
+      rename_with(.cols = contains("woreda"),.fn=~"adm3_name")
 
   }
   # so no admin 1 in old format data....need to join later by adm2
   if(data_format=="old"){
     res <- df|>
-      dplyr::rename_with(.cols = dplyr::any_of(c("name_of_zone" )),.fn = ~"zone") |>
-      dplyr::rename(
-        # adm1_name="region",
-        adm2_name = "zone"
-      )
+      rename_with(.cols = contains("zone"),
+                  .fn = ~"adm2_name")
+
   }
   return(res)
 
@@ -564,26 +563,35 @@ extract_pre_clean_names_adms_batch <- function(df_list,data_format= "current"){
       purrr::map2(.y = names(df_list),
                   .f = \(dat,fname){
 
-        # blankout garbage rows (if no zone)
-        dat_garbage_blanked <- dat %>%
-                       dplyr::mutate(across(everything(),
-                                            ~ifelse(is.na(Zone),NA,.x))
-                       )
+                    # blankout garbage rows (if no zone)
+                    dat_garbage_blanked <- dat %>%
+                      clean_names() %>%
+                      rename_with(.cols = contains("zone"),
+                                  .fn = ~"zone") %>%
+                      # so ugly but it works.
+                      rename_with(
+                        ~case_when(
+                          str_detect(.,"^woreda")~"name_of_woredas",
+                          TRUE~.
+                        )
+                      ) %>%
+                      mutate(
+                        across(everything(),
+                               ~ifelse(is.na(zone),NA,.x))
+                      ) %>%
+                      filter(!is.na(zone))
 
-        x_top <- parse_top_table(dat_garbage_blanked) |>
-          dplyr::mutate(
-            file_name = fname
-          )
-        print(fname)
-        # print(colnames(x_temp))
-        print(nrow(x_top))
+                    x_top <- parse_top_table(dat_garbage_blanked) |>
+                      dplyr::mutate(
+                        file_name = fname
+                      )
+                    print(fname)
+                    # print(colnames(x_temp))
 
+                    res <- x_top %>%
+                      clean_names_and_admins(data_format = data_format)
 
-
-        res <- x_top %>%
-          clean_names_and_admins(data_format = data_format)
-
-      }
+                  }
       )
 
 
