@@ -225,6 +225,10 @@ list(
 
       )
   ),
+tar_target(
+  name=RB_pre_post_compiled_complete,
+  command = make_rb_dates_complete(RB_pre_post_compiled)
+),
 
 
 
