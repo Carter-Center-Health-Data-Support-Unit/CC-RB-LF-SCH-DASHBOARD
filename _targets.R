@@ -8,6 +8,7 @@ library(targets)
 library(lubridate)
 library(tidyverse)
 library(janitor)
+library(readxl)
 # library(tarchetypes) # Load other packages as needed. # nolint
 
 # Set target options:
@@ -31,13 +32,130 @@ tar_source()
 root_dir <- Sys.getenv("CC_RB_LF_SCH_MONTHLY")
 data_dir <- glue::glue("{root_dir}/ETH/data_raw/")
 # Replace the target list below with your own:
+# fp <- list.files(data_dir,full.names = T)[1]
 
+
+#
+# fp <- dir(data_dir,full.names = T)
+# fp <- fp[str_detect(basename(fp),"^201905")]
+# ck <- excel_sheets(fp) %>%
+#   map(
+#     \(sn){
+#       cat("sheet name:",sn,"\n",
+#           hd_idx,"\n")
+#       dft <- fp %>%
+#         read_xlsx(sheet = sn,skip = 0) %>%
+#         mutate(
+#           tab_name = sn,
+#           across(everything(),~as.character(.x))
+#         )
+#       if(nrow(dft)==0){
+#         res <- NULL
+#       }
+#       if(nrow(dft)>0){
+#         hd_idx <-dft %>%
+#           detect_header_index()
+#         # cat("sheet name:",sn,"\n",
+#         #     hd_idx,"\n")
+#
+#         res <- dft %>%
+#           row_to_names(
+#             row_number = hd_idx,
+#             remove_rows_above = T
+#           ) %>%
+#           clean_names() %>%
+#           mutate(tab_name = snakecase::to_snake_case(sn)) %>%
+#           pivot_longer(-tab_name)
+#
+#       }
+#       return(res)
+#       }
+#
+#   )
+# df <- read_xlsx(fp,sheet = "ESRI_MAPINFO_SHEET",skip=0) %>%
+#   mutate(
+#     tab_name = "Assessments-Entomology",
+#     across(everything(),~as.character(.x))
+#   )
+# hd_idx <- df %>%
+#   detect_header_index()
+# df %>%
+#   row_to_names(
+#     row_number = hd_idx,
+#     remove_rows_above = T
+#   ) %>%
+#   clean_names() %>%
+#   mutate(tab_name = snakecase::to_snake_case("Assessments-Entomology")) %>%
+#   pivot_longer(-tab_name)
+#
+#
+# df %>%
+#   detect_header_index()
+# df %>%
+#   row_to_names(
+#     row_number = 7,
+#     remove_rows_above = T
+#   ) %>%
+#   clean_names() %>%
+#   print(n=60) %>%
+#   pivot_longer(cols = everything)
+# what i need to do is create a cataogue of every month - and read in data using catalogue.
+# can flag missing & dups there
 
 list(
 
   # targets::tar_target(f)
   # Load/track Inputs ------------------------------------------------------------
   # compile current format RB rx tabs into list of dfs
+
+  tar_target(
+    name = all_wbs_wide,
+    command = list.files(data_dir,full.names = T) %>%
+      map(
+        \(fp){
+          base_name <-  basename(fp)
+          cat(base_name,"\n")
+          excel_sheets(fp) %>%
+            map(
+              \(sn){
+                cat("sheet name:",sn,"\n",
+                    "file:", basename(fp),"\n")
+                fp %>%
+                  read_xlsx(sheet = sn,skip = 0) %>%
+                  mutate(
+                    # coerce to character for pivoting in next step.
+                    across(everything(),~as.character(.x))
+                  )
+              }
+
+            ) %>%
+            set_names(excel_sheets(fp) )
+        }
+      ) %>%
+        set_names(list.files(data_dir,full.names = T) %>%basename())
+  ),
+
+  # tar_target(
+  #   name = all_wbs_long,
+  #   command = all_wbs_wide %>%
+  #     map_dfr(
+  #       \(wb_list){
+  #         wb_list %>%
+  #           discard(~is.null(.x)) %>%
+  #           map(\(ws){
+  #             ws %>%
+  #               pivot_longer(-c("file_name","tab_name","sheet_idx"))
+  #           })
+  #       }
+  #     ) %>%
+  #     mutate(
+  #       year=str_sub(string = file_name,start = 1,end = 4) |> as.numeric(),
+  #       month=str_sub(string = file_name,start = 5,end = 6) |> as.numeric(),
+  #       date= lubridate::ymd(glue::glue("{year}-{month}-01"))
+  #     )
+  #
+  # ),
+
   tar_target(RB_post201905_df_ls,
              compile_tab(folder_path = data_dir,which_tabs = "RB_rx")
   ),
